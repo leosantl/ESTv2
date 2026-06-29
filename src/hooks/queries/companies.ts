@@ -85,7 +85,7 @@ export function useCompanyKpis(companyId: string) {
         p_company_id: companyId,
       });
       if (error) throw error;
-      return data as CompanyKpis;
+      return (Array.isArray(data) ? data[0] : data) as CompanyKpis;
     },
     enabled: !!companyId,
     refetchInterval: REFETCH_INTERVAL.companyKpis,

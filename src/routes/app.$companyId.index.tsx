@@ -26,8 +26,8 @@ function CompanyDashboard() {
   if (loadingCo) return <div className="flex h-64 items-center justify-center"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>;
   if (!company) return null;
 
-  const expiringSoon = kpis?.documents.vencendo ?? 0;
-  const revenueMonth = kpis?.finance.receita_mes ? kpis.finance.receita_mes / 100 : (cashflow[cashflow.length - 1]?.in ?? 0);
+  const expiringSoon = kpis?.documents?.vencendo ?? 0;
+  const revenueMonth = kpis?.finance?.receita_mes ? kpis.finance.receita_mes / 100 : (cashflow[cashflow.length - 1]?.in ?? 0);
   const revenueYear = cashflow.reduce((a, b) => a + b.in, 0);
   const chartData = cashflow.map((c) => ({ month: c.month, in: c.in, out: c.out }));
   const weekData = weekSchedule.map((w) => ({ day: w.dia, count: w.count }));
@@ -56,14 +56,14 @@ function CompanyDashboard() {
         )}
 
         <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <KpiCard label="Atiradores" value={(kpis?.clients.total ?? 0).toLocaleString("pt-BR")} hint={`+${kpis?.clients.novos_mes ?? 0} este mês`} hintTone="positive" />
-          <KpiCard label="Acervo Total" value={(kpis?.weapons.total ?? 0).toLocaleString("pt-BR")} hint="Armas registradas" hintTone="muted" />
-          <KpiCard label="Munição" value={(kpis?.ammo.total_estoque ?? 0).toLocaleString("pt-BR")} hint={kpis?.ammo.abaixo_minimo ? "Reposição pendente" : "Estoque ok"} hintTone={kpis?.ammo.abaixo_minimo ? "warning" : "muted"} />
-          <KpiCard label="Agendamentos" value={kpis?.schedules.hoje ?? 0} hint="Hoje" hintTone="muted" />
-          <KpiCard label="Documentos" value={kpis?.documents.total ?? documents.length} hint={`${expiringSoon} vencendo`} hintTone="warning" />
+          <KpiCard label="Atiradores" value={(kpis?.clients?.total ?? 0).toLocaleString("pt-BR")} hint={`+${kpis?.clients?.novos_mes ?? 0} este mês`} hintTone="positive" />
+          <KpiCard label="Acervo Total" value={(kpis?.weapons?.total ?? 0).toLocaleString("pt-BR")} hint="Armas registradas" hintTone="muted" />
+          <KpiCard label="Munição" value={(kpis?.ammo?.total_estoque ?? 0).toLocaleString("pt-BR")} hint={kpis?.ammo?.abaixo_minimo ? "Reposição pendente" : "Estoque ok"} hintTone={kpis?.ammo?.abaixo_minimo ? "warning" : "muted"} />
+          <KpiCard label="Agendamentos" value={kpis?.schedules?.hoje ?? 0} hint="Hoje" hintTone="muted" />
+          <KpiCard label="Documentos" value={kpis?.documents?.total ?? documents.length} hint={`${expiringSoon} vencendo`} hintTone="warning" />
           <KpiCard label="Receita Mensal" value={fmt(revenueMonth)} hint="Mês corrente" hintTone="positive" />
           <KpiCard label="Receita Anual" value={fmt(revenueYear)} hint="YTD 2026" hintTone="positive" />
-          <KpiCard label="Inadimplência" value={fmt((kpis?.finance.inadimplencia ?? 0) / 100)} hint="Em atraso" hintTone="danger" />
+          <KpiCard label="Inadimplência" value={fmt((kpis?.finance?.inadimplencia ?? 0) / 100)} hint="Em atraso" hintTone="danger" />
         </section>
 
         <section className="grid gap-4 lg:grid-cols-3">
