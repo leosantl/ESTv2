@@ -48,43 +48,30 @@ function OnboardingPage() {
       setStep(1);
       return;
     }
-    if (companyForm.cnpj && !validateCnpj(companyForm.cnpj)) {
-      toast.error("CNPJ inválido. Verifique os dígitos.");
-      setStep(1);
-      return;
-    }
     setSubmitting(true);
     try {
       const initials = companyForm.nomeFantasia.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
-      const { data: company, error: companyErr } = await supabase
-        .from("companies")
-        .insert({
-          razao_social: companyForm.razaoSocial,
-          nome_fantasia: companyForm.nomeFantasia,
-          cnpj: companyForm.cnpj || null,
-          email: companyForm.email,
-          telefone: companyForm.telefone || null,
-          cidade: companyForm.cidade || null,
-          tipo: companyForm.tipo,
-          logo_initials: initials || "??",
-          plan_id: plan,
-          status: "trial",
-        })
-        .select()
-        .single();
+
+      const { data: companyId, error: companyErr } = await supabase.rpc("create_company_onboarding", {
+        p_razao_social: companyForm.razaoSocial,
+        p_nome_fantasia: companyForm.nomeFantasia,
+        p_cnpj: companyForm.cnpj || "",
+        p_email: companyForm.email,
+        p_telefone: companyForm.telefone || "",
+        p_cidade: companyForm.cidade || "",
+        p_tipo: companyForm.tipo,
+        p_logo_initials: initials || "??",
+        p_plan_id: plan,
+      });
 
       if (companyErr) throw companyErr;
-      setCreatedCompanyId(company.id);
-
-      await supabase.from("subscriptions").insert({
-        company_id: company.id, plan_id: plan, status: "trial", trial: true,
-      });
+      setCreatedCompanyId(companyId as string);
 
       const { error: signUpErr } = await supabase.auth.signUp({
         email: companyForm.email,
         password: adminPassword,
         options: {
-          data: { nome: companyForm.razaoSocial.split(" ")[0], role: "company_admin", company_id: company.id },
+          data: { nome: companyForm.razaoSocial.split(" ")[0], role: "company_admin", company_id: companyId },
         },
       });
       if (signUpErr) throw signUpErr;
@@ -94,7 +81,7 @@ function OnboardingPage() {
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
           await supabase.functions.invoke("invite-user", {
-            body: { email: m.email, nome: m.nome, role: m.role, company_id: company.id },
+            body: { email: m.email, nome: m.nome, role: m.role, company_id: companyId },
             headers: { Authorization: `Bearer ${session.access_token}` },
           }).catch(() => {});
         }
@@ -129,47 +116,44 @@ function OnboardingPage() {
           <Link to="/login" className="text-xs font-semibold text-muted-foreground hover:text-foreground">Já tenho conta →</Link>
         </div>
       </header>
-
       <main className="mx-auto max-w-5xl px-6 py-10">
         <div className="mb-8">
           <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Onboarding · Etapa {step} de 5</p>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight">Cadastrar nova empresa</h1>
         </div>
-
         <ol className="mb-8 flex items-center gap-2 overflow-x-auto rounded-lg border bg-card p-3">
           {steps.map((s, i) => {
-            const done = s.id < step;
-            const active = s.id === step;
+            const Icon = s.icon;
+            const done = step > s.id;
+            const active = step === s.id;
             return (
-              <li key={s.id} className="flex flex-1 items-center gap-2">
-                <div className={`flex min-w-0 flex-1 items-center gap-2 rounded-md px-3 py-2 transition-colors ${active ? "bg-accent text-accent-foreground" : done ? "bg-muted" : "opacity-60"}`}>
-                  <div className={`grid size-6 shrink-0 place-items-center rounded-full font-mono text-[10px] font-bold ${active ? "bg-accent-foreground text-accent" : done ? "bg-accent text-accent-foreground" : "border bg-card"}`}>
-                    {done ? <Check className="h-3 w-3" strokeWidth={3} /> : s.id}
-                  </div>
-                  <span className="truncate text-xs font-semibold">{s.label}</span>
-                </div>
-                {i < steps.length - 1 && <span className="h-px w-3 shrink-0 bg-border" />}
+              <li key={s.id} className="flex items-center gap-2">
+                {i > 0 && <span className="h-px w-6 shrink-0 bg-border" />}
+                <button onClick={() => step > s.id && setStep(s.id)}
+                  className={"flex items-center gap-2 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors " +
+                    (active ? "bg-foreground text-background" : done ? "text-foreground" : "text-muted-foreground")}>
+                  {done ? <Check className="h-3 w-3" /> : <Icon className="h-3 w-3" />}
+                  {s.label}
+                </button>
               </li>
             );
           })}
         </ol>
-
-        <div className="rounded-lg border bg-card p-7 shadow-sm">
-          {step === 1 && <StepCompany form={companyForm} setForm={setCompanyForm} password={adminPassword} setPassword={setAdminPassword} />}
-          {step === 2 && <StepOps />}
-          {step === 3 && <StepTeam team={team} setTeam={setTeam} />}
-          {step === 4 && <StepPlan plan={plan} setPlan={setPlan} />}
-          {step === 5 && <StepDone plan={plan} companyName={companyForm.nomeFantasia} teamCount={team.filter((m) => m.email).length} />}
-
-          <div className="mt-8 flex items-center justify-between border-t pt-5">
+        <div className="rounded-xl border bg-card p-8">
+          {step === 1 && <StepEmpresa form={companyForm} onChange={setCompanyForm} password={adminPassword} onPassword={setAdminPassword} />}
+          {step === 2 && <StepOperacao />}
+          {step === 3 && <StepEquipe team={team} onChange={setTeam} />}
+          {step === 4 && <StepPlano plan={plan} onChange={setPlan} />}
+          {step === 5 && <StepConcluido companyId={createdCompanyId} />}
+          <div className="mt-8 flex justify-between border-t pt-6">
             <button onClick={() => setStep((s) => Math.max(1, s - 1))} disabled={step === 1 || step === 5}
-              className="inline-flex h-9 items-center gap-2 rounded-md border bg-card px-3 text-xs font-semibold hover:bg-muted disabled:opacity-40">
+              className="flex items-center gap-1.5 rounded-md border px-4 py-2 text-sm font-medium disabled:opacity-40">
               <ArrowLeft className="h-3.5 w-3.5" /> Voltar
             </button>
             <button onClick={next} disabled={submitting}
-              className="group inline-flex h-9 items-center gap-2 rounded-md bg-accent px-4 text-xs font-semibold text-accent-foreground hover:opacity-90 disabled:opacity-60">
-              {submitting ? "Criando empresa..." : step === 5 ? "Abrir workspace" : step === 4 ? "Confirmar e ativar" : "Continuar"}
-              {!submitting && <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />}
+              className="flex items-center gap-1.5 rounded-md bg-foreground px-5 py-2 text-sm font-semibold text-background disabled:opacity-60">
+              {submitting ? "Salvando..." : step === 4 ? "Confirmar e ativar" : step === 5 ? "Ir para o painel" : "Continuar"}
+              {!submitting && <ArrowRight className="h-3.5 w-3.5" />}
             </button>
           </div>
         </div>
@@ -178,194 +162,147 @@ function OnboardingPage() {
   );
 }
 
-function formatCnpj(v: string): string {
-  const d = v.replace(/\D/g, "").slice(0, 14);
-  if (d.length <= 2) return d;
-  if (d.length <= 5) return `${d.slice(0, 2)}.${d.slice(2)}`;
-  if (d.length <= 8) return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5)}`;
-  if (d.length <= 12) return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8)}`;
-  return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12)}`;
-}
-
-function validateCnpj(cnpj: string): boolean {
-  const d = cnpj.replace(/\D/g, "");
-  if (d.length !== 14 || /^(\d)\1+$/.test(d)) return false;
-  let sum = 0;
-  let weight = 5;
-  for (let i = 0; i < 12; i++) { sum += parseInt(d[i]) * weight; weight = weight === 2 ? 9 : weight - 1; }
-  const r1 = sum % 11 < 2 ? 0 : 11 - (sum % 11);
-  if (parseInt(d[12]) !== r1) return false;
-  sum = 0; weight = 6;
-  for (let i = 0; i < 13; i++) { sum += parseInt(d[i]) * weight; weight = weight === 2 ? 9 : weight - 1; }
-  const r2 = sum % 11 < 2 ? 0 : 11 - (sum % 11);
-  return parseInt(d[13]) === r2;
-}
-
-function Field({ label, value, onChange, mono, full, type = "text" }: {
-  label: string; value: string; onChange: (v: string) => void; mono?: boolean; full?: boolean; type?: string;
+function StepEmpresa({ form, onChange, password, onPassword }: {
+  form: CompanyForm; onChange: (f: CompanyForm) => void; password: string; onPassword: (p: string) => void;
 }) {
-  return (
-    <div className={full ? "sm:col-span-2" : ""}>
-      <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</label>
-      <input type={type} value={value} onChange={(e) => onChange(e.target.value)}
-        className={`h-10 w-full rounded-md border bg-background px-3 text-sm outline-none focus:border-foreground/60 ${mono ? "font-mono" : ""}`} />
-    </div>
-  );
-}
-
-function StepCompany({ form, setForm, password, setPassword }: {
-  form: CompanyForm; setForm: (f: CompanyForm) => void; password: string; setPassword: (p: string) => void;
-}) {
-  const set = (k: keyof CompanyForm) => (v: string) => setForm({ ...form, [k]: v });
-  const cnpjInvalid = form.cnpj.replace(/\D/g, "").length === 14 && !validateCnpj(form.cnpj);
-  return (
-    <div>
-      <h2 className="text-lg font-semibold">Dados da empresa</h2>
-      <p className="mt-1 text-sm text-muted-foreground">Essas informações aparecerão em relatórios, recibos e documentos emitidos.</p>
-      <div className="mt-6 grid gap-4 sm:grid-cols-2">
-        <Field label="Razão social *" value={form.razaoSocial} onChange={set("razaoSocial")} full />
-        <Field label="Nome fantasia *" value={form.nomeFantasia} onChange={set("nomeFantasia")} />
-        <div>
-          <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">CNPJ</label>
-          <input
-            type="text"
-            value={form.cnpj}
-            onChange={(e) => set("cnpj")(formatCnpj(e.target.value))}
-            placeholder="00.000.000/0001-00"
-            maxLength={18}
-            className={`h-10 w-full rounded-md border bg-background px-3 font-mono text-sm outline-none focus:border-foreground/60 ${cnpjInvalid ? "border-red-400 focus:border-red-500" : ""}`}
-          />
-          {cnpjInvalid && <p className="mt-1 text-[11px] text-red-500">CNPJ inválido</p>}
-        </div>
-        <div>
-          <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Tipo de operação</label>
-          <select value={form.tipo} onChange={(e) => set("tipo")(e.target.value)} className="h-10 w-full rounded-md border bg-background px-3 text-sm outline-none focus:border-foreground/60">
-            <option value="Clube">Clube de Tiro</option><option value="Estande">Estande</option><option value="Empresa">Despachante / Empresa</option>
-          </select>
-        </div>
-        <Field label="Cidade / UF" value={form.cidade} onChange={set("cidade")} />
-        <Field label="E-mail do administrador *" value={form.email} onChange={set("email")} type="email" mono />
-        <Field label="Senha do administrador *" value={password} onChange={setPassword} type="password" mono />
-        <Field label="Telefone" value={form.telefone} onChange={set("telefone")} mono />
-      </div>
-    </div>
-  );
-}
-
-function StepOps() {
-  const modules = [
-    { k: "Cadastro de atiradores e CRs", on: true },
-    { k: "Controle de acervo (armas)", on: true },
-    { k: "Movimentação de munições", on: true },
-    { k: "Agenda de baias e instrutores", on: true },
-    { k: "Despachante integrado (GTs/SIGMA)", on: false },
-    { k: "Financeiro e mensalidades", on: true },
+  function formatCnpj(v: string) {
+    const d = v.replace(/\D/g, "").slice(0, 14);
+    return d.replace(/^(\d{2})(\d)/, "$1.$2").replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
+      .replace(/\.(\d{3})(\d)/, ".$1/$2").replace(/(\d{4})(\d)/, "$1-$2");
+  }
+  const fields = [
+    { key: "razaoSocial", label: "Razão social *", span: 2 },
+    { key: "nomeFantasia", label: "Nome fantasia *", span: 2 },
+    { key: "cnpj", label: "CNPJ", span: 1 },
+    { key: "tipo", label: "Tipo", span: 1, type: "select", options: ["Clube", "Estande", "Despachante", "Instrutor"] },
+    { key: "email", label: "E-mail *", span: 1, type: "email" },
+    { key: "telefone", label: "Telefone", span: 1 },
+    { key: "cidade", label: "Cidade", span: 2 },
   ];
   return (
     <div>
-      <h2 className="text-lg font-semibold">Operação CAC</h2>
-      <p className="mt-1 text-sm text-muted-foreground">Estes módulos já vêm habilitados em todos os planos e podem ser ajustados depois.</p>
-      <div className="mt-6 grid gap-3 sm:grid-cols-2">
-        {modules.map((m) => (
-          <div key={m.k} className="flex items-center justify-between gap-3 rounded-md border bg-background p-3">
-            <span className="text-sm">{m.k}</span>
-            <span className={`relative h-5 w-9 rounded-full transition-colors ${m.on ? "bg-accent" : "bg-border"}`}>
-              <span className={`absolute top-0.5 size-4 rounded-full bg-card shadow-sm transition-all ${m.on ? "left-[18px]" : "left-0.5"}`} />
-            </span>
+      <h2 className="mb-1 text-lg font-semibold">Dados da empresa</h2>
+      <p className="mb-6 text-sm text-muted-foreground">Informações básicas do seu clube ou estande.</p>
+      <div className="grid gap-4 sm:grid-cols-2">
+        {fields.map((f) => (
+          <div key={f.key} className={f.span === 2 ? "sm:col-span-2" : ""}>
+            <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{f.label}</label>
+            {f.type === "select" ? (
+              <select value={(form as any)[f.key]} onChange={(e) => onChange({ ...form, [f.key]: e.target.value })}
+                className="h-9 w-full rounded-md border bg-background px-3 text-sm outline-none">
+                {f.options!.map((o) => <option key={o}>{o}</option>)}
+              </select>
+            ) : (
+              <input type={f.type ?? "text"} value={f.key === "cnpj" ? formatCnpj((form as any)[f.key]) : (form as any)[f.key]}
+                onChange={(e) => onChange({ ...form, [f.key]: f.key === "cnpj" ? e.target.value.replace(/\D/g, "") : e.target.value })}
+                className="h-9 w-full rounded-md border bg-background px-3 text-sm outline-none" />
+            )}
           </div>
         ))}
+        <div className="sm:col-span-2">
+          <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Senha do administrador *</label>
+          <input type="password" value={password} onChange={(e) => onPassword(e.target.value)} placeholder="Mínimo 8 caracteres"
+            className="h-9 w-full rounded-md border bg-background px-3 text-sm outline-none" />
+        </div>
       </div>
     </div>
   );
 }
 
-function StepTeam({ team, setTeam }: { team: TeamMember[]; setTeam: (t: TeamMember[]) => void }) {
-  function update(i: number, key: keyof TeamMember, value: string) {
-    const copy = [...team]; copy[i] = { ...copy[i], [key]: value }; setTeam(copy);
-  }
+function StepOperacao() {
+  const modules = [
+    { label: "Cadastro de atiradores e CRs", default: true },
+    { label: "Controle de acervo (armas)", default: true },
+    { label: "Movimentação de munições", default: true },
+    { label: "Agenda de baias e instrutores", default: true },
+    { label: "Despachante integrado (GTs/SIGMA)", default: false },
+    { label: "Financeiro e mensalidades", default: true },
+  ];
+  const [enabled, setEnabled] = useState(() => modules.map((m) => m.default));
   return (
     <div>
-      <h2 className="text-lg font-semibold">Convidar equipe</h2>
-      <p className="mt-1 text-sm text-muted-foreground">Cada membro receberá um e-mail para definir senha e ativar a conta. Pode pular e convidar depois.</p>
-      <div className="mt-6 space-y-2">
-        {team.map((u, i) => (
-          <div key={i} className="grid grid-cols-[1fr_1fr_160px_auto] items-center gap-2">
-            <input placeholder="Nome" value={u.nome} onChange={(e) => update(i, "nome", e.target.value)} className="h-10 rounded-md border bg-background px-3 text-sm outline-none focus:border-foreground/60" />
-            <input placeholder="email@empresa.com" value={u.email} onChange={(e) => update(i, "email", e.target.value)} className="h-10 rounded-md border bg-background px-3 font-mono text-sm outline-none focus:border-foreground/60" />
-            <select value={u.role} onChange={(e) => update(i, "role", e.target.value)} className="h-10 rounded-md border bg-background px-3 text-sm outline-none focus:border-foreground/60">
-              <option value="gerente">Gerente</option><option value="instrutor">Instrutor</option>
-              <option value="operador">Operador</option><option value="financeiro">Financeiro</option>
-            </select>
-            <button onClick={() => setTeam(team.filter((_, idx) => idx !== i))} className="h-10 rounded-md border bg-card px-3 text-xs font-semibold text-muted-foreground hover:bg-muted">Remover</button>
-          </div>
-        ))}
-        <button onClick={() => setTeam([...team, { email: "", nome: "", role: "instrutor" }])}
-          className="mt-2 inline-flex h-9 items-center gap-2 rounded-md border border-dashed bg-card px-3 text-xs font-semibold text-muted-foreground hover:bg-muted">
-          + Adicionar membro
-        </button>
-      </div>
-    </div>
-  );
-}
-
-type PlanCard = { id: "starter" | "professional" | "enterprise"; label: string; price: string; desc: string; features: string[]; featured?: boolean };
-const plans: PlanCard[] = [
-  { id: "starter", label: "Starter", price: "R$ 199", desc: "Até 500 clientes · 5 usuários", features: ["Acervo e CRs", "Documentos", "Suporte e-mail"] },
-  { id: "professional", label: "Professional", price: "R$ 599", desc: "Até 5.000 clientes · 20 usuários", features: ["Tudo do Starter", "Agenda multi-baia", "Financeiro completo", "Suporte prioritário"], featured: true },
-  { id: "enterprise", label: "Enterprise", price: "R$ 1.499", desc: "Ilimitado · multi-unidade", features: ["Tudo do Pro", "SSO/SAML", "API + Webhooks", "CSM dedicado"] },
-];
-
-function StepPlan({ plan, setPlan }: { plan: string; setPlan: (p: "starter" | "professional" | "enterprise") => void }) {
-  return (
-    <div>
-      <h2 className="text-lg font-semibold">Escolher plano</h2>
-      <p className="mt-1 text-sm text-muted-foreground">Trial de 14 dias incluso em todos os planos. Sem cartão obrigatório.</p>
-      <div className="mt-6 grid gap-3 sm:grid-cols-3">
-        {plans.map((p) => {
-          const active = plan === p.id;
-          return (
-            <button key={p.id} onClick={() => setPlan(p.id)}
-              className={`relative flex flex-col gap-3 rounded-lg border p-5 text-left transition-all ${active ? "border-foreground bg-muted/40" : "bg-card hover:border-foreground/40"}`}>
-              {p.featured && <span className="absolute right-3 top-3 rounded bg-accent px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-accent-foreground">Popular</span>}
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">{p.label}</p>
-                <p className="mt-1 font-mono text-2xl font-semibold tabular-nums">{p.price}</p>
-                <p className="text-[11px] text-muted-foreground">por mês · {p.desc}</p>
-              </div>
-              <ul className="space-y-1.5 border-t pt-3 text-xs">
-                {p.features.map((f) => <li key={f} className="flex items-center gap-2"><Check className="h-3 w-3 text-foreground" strokeWidth={3} /> {f}</li>)}
-              </ul>
-              <span className={`mt-auto inline-flex h-7 items-center justify-center rounded-md text-[11px] font-bold uppercase tracking-wider ${active ? "bg-accent text-accent-foreground" : "border"}`}>
-                {active ? "Selecionado" : "Selecionar"}
-              </span>
+      <h2 className="mb-1 text-lg font-semibold">Operação CAC</h2>
+      <p className="mb-6 text-sm text-muted-foreground">Estes módulos já vêm habilitados em todos os planos e podem ser ajustados depois.</p>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {modules.map((m, i) => (
+          <label key={m.label} className="flex cursor-pointer items-center justify-between rounded-lg border bg-background px-4 py-3">
+            <span className="text-sm font-medium">{m.label}</span>
+            <button type="button" onClick={() => setEnabled((p) => p.map((v, j) => j === i ? !v : v))}
+              className={"relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors " + (enabled[i] ? "bg-foreground" : "bg-input")}>
+              <span className={"pointer-events-none inline-block h-4 w-4 rounded-full bg-background shadow transition-transform " + (enabled[i] ? "translate-x-4" : "translate-x-0")} />
             </button>
-          );
-        })}
+          </label>
+        ))}
       </div>
     </div>
   );
 }
 
-function StepDone({ plan, companyName, teamCount }: { plan: string; companyName: string; teamCount: number }) {
-  const planLabel = plans.find((p) => p.id === plan)?.label ?? plan;
+function StepEquipe({ team, onChange }: { team: TeamMember[]; onChange: (t: TeamMember[]) => void }) {
   return (
-    <div className="text-center">
-      <div className="mx-auto grid size-14 place-items-center rounded-full bg-accent text-accent-foreground">
-        <Check className="h-6 w-6" strokeWidth={3} />
-      </div>
-      <h2 className="mt-4 text-xl font-semibold tracking-tight">Empresa cadastrada com sucesso</h2>
-      <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-        <span className="font-semibold text-foreground">{companyName}</span> está ativa no plano{" "}
-        <span className="font-semibold text-foreground">{planLabel}</span>. Convites foram enviados para sua equipe.
-      </p>
-      <dl className="mx-auto mt-6 grid max-w-md grid-cols-3 gap-3 text-left">
-        {[{ k: "Status", v: "Trial ativo" }, { k: "Convites", v: `${teamCount} enviados` }, { k: "Trial", v: "14 dias" }].map((s) => (
-          <div key={s.k} className="rounded-md border bg-muted/40 p-3">
-            <dt className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">{s.k}</dt>
-            <dd className="mt-1 font-mono text-sm font-semibold">{s.v}</dd>
+    <div>
+      <h2 className="mb-1 text-lg font-semibold">Equipe inicial</h2>
+      <p className="mb-6 text-sm text-muted-foreground">Convide membros da sua equipe. Você pode pular e adicionar depois.</p>
+      <div className="space-y-3">
+        {team.map((m, i) => (
+          <div key={i} className="grid gap-3 sm:grid-cols-3">
+            <input placeholder="Nome" value={m.nome} onChange={(e) => onChange(team.map((t, j) => j === i ? { ...t, nome: e.target.value } : t))}
+              className="h-9 rounded-md border bg-background px-3 text-sm outline-none" />
+            <input placeholder="E-mail" value={m.email} onChange={(e) => onChange(team.map((t, j) => j === i ? { ...t, email: e.target.value } : t))}
+              className="h-9 rounded-md border bg-background px-3 text-sm outline-none" />
+            <select value={m.role} onChange={(e) => onChange(team.map((t, j) => j === i ? { ...t, role: e.target.value } : t))}
+              className="h-9 rounded-md border bg-background px-3 text-sm outline-none">
+              {["instrutor", "operador", "gerente", "financeiro"].map((r) => <option key={r}>{r}</option>)}
+            </select>
           </div>
         ))}
-      </dl>
+        <button onClick={() => onChange([...team, { email: "", nome: "", role: "instrutor" }])}
+          className="text-xs font-semibold text-muted-foreground hover:text-foreground">+ Adicionar membro</button>
+      </div>
+    </div>
+  );
+}
+
+function StepPlano({ plan, onChange }: { plan: string; onChange: (p: any) => void }) {
+  const plans = [
+    { id: "starter", name: "Starter", price: "199", hint: "Até 500 clientes · 5 usuários", features: ["Acervo e CRs", "Documentos", "Suporte e-mail"] },
+    { id: "professional", name: "Professional", price: "599", hint: "Até 5.000 clientes · 20 usuários", popular: true, features: ["Tudo do Starter", "Agenda multi-baia", "Financeiro completo", "Suporte prioritário"] },
+    { id: "enterprise", name: "Enterprise", price: "1.499", hint: "Ilimitado · multi-unidade", features: ["Tudo do Pro", "SSO/SAML", "API + Webhooks", "CSM dedicado"] },
+  ];
+  return (
+    <div>
+      <h2 className="mb-1 text-lg font-semibold">Escolher plano</h2>
+      <p className="mb-6 text-sm text-muted-foreground">Trial de 14 dias incluso em todos os planos. Sem cartão obrigatório.</p>
+      <div className="grid gap-4 sm:grid-cols-3">
+        {plans.map((p) => (
+          <button key={p.id} onClick={() => onChange(p.id)}
+            className={"rounded-xl border-2 p-5 text-left transition-all " + (plan === p.id ? "border-foreground" : "border-border hover:border-foreground/40")}>
+            {p.popular && <span className="mb-2 inline-block rounded bg-foreground px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-background">Popular</span>}
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{p.name}</p>
+            <p className="mt-1 text-2xl font-bold">R$ {p.price}</p>
+            <p className="mt-0.5 text-[11px] text-muted-foreground">por mês · {p.hint}</p>
+            <ul className="mt-4 space-y-1.5">
+              {p.features.map((f) => <li key={f} className="flex items-center gap-2 text-xs"><Check className="h-3 w-3 shrink-0" />{f}</li>)}
+            </ul>
+            <div className={"mt-4 w-full rounded-md py-2 text-center text-xs font-semibold " + (plan === p.id ? "bg-foreground text-background" : "border border-border")}>
+              {plan === p.id ? "Selecionado" : "Selecionar"}
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function StepConcluido({ companyId }: { companyId: string | null }) {
+  return (
+    <div className="py-8 text-center">
+      <div className="mx-auto mb-4 grid size-16 place-items-center rounded-full bg-foreground text-background">
+        <Sparkles className="h-7 w-7" />
+      </div>
+      <h2 className="text-2xl font-bold">Tudo pronto!</h2>
+      <p className="mt-2 text-sm text-muted-foreground">Sua empresa foi cadastrada. Clique em "Ir para o painel" para começar.</p>
+      {!companyId && <p className="mt-2 text-xs text-muted-foreground">Verifique seu e-mail para confirmar o cadastro.</p>}
     </div>
   );
 }
