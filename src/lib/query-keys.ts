@@ -42,8 +42,8 @@ export const queryKeys = {
     categories: (companyId: string) => ["finance-categories", companyId] as const,
   },
   documents: {
-    list: (companyId: string, status?: string, tipo?: string) =>
-      ["documents", companyId, status, tipo] as const,
+    list: (companyId: string, status?: string, tipo?: string, clientId?: string) =>
+      ["documents", companyId, status, tipo, clientId] as const,
     scope: (companyId: string) => ["documents", companyId] as const,
   },
   users: {

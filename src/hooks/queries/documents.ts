@@ -13,6 +13,7 @@ import { supabase } from "@/lib/supabase";
 interface DocumentListOptions {
   status?: string;
   tipo?: string;
+  clientId?: string;
 }
 
 const DOC_STATUS_FILTER: Record<string, string> = {
@@ -22,9 +23,9 @@ const DOC_STATUS_FILTER: Record<string, string> = {
 };
 
 export function useDocuments(companyId: string, opts?: DocumentListOptions) {
-  const { status, tipo } = opts ?? {};
+  const { status, tipo, clientId } = opts ?? {};
   return useQuery({
-    queryKey: queryKeys.documents.list(companyId, status, tipo),
+    queryKey: queryKeys.documents.list(companyId, status, tipo, clientId),
     queryFn: async () => {
       let q = supabase
         .from("documents_with_status")
@@ -33,6 +34,8 @@ export function useDocuments(companyId: string, opts?: DocumentListOptions) {
         .order("vencimento");
 
       if (tipo) q = q.eq("tipo", tipo.toLowerCase());
+      if (clientId) q = q.eq("client_id", clientId);
+      if (clientId) q = q.eq("client_id", clientId);
       if (status && DOC_STATUS_FILTER[status]) {
         q = q.eq("doc_status", DOC_STATUS_FILTER[status]);
       }
