@@ -95,11 +95,6 @@ export function AppShell({
           <Link to={brandHref} className="flex items-center gap-2.5 px-1 py-1.5">
             <div className="grid size-8 shrink-0 place-items-center rounded bg-accent text-[10px] font-bold tracking-tighter text-accent-foreground">
               {brandInitials}
-            {onSignOut && (
-              <button onClick={onSignOut} title="Sair" className="group-data-[collapsible=icon]:hidden shrink-0 rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground">
-                <LogOut className="h-4 w-4" strokeWidth={1.75} />
-              </button>
-            )}
             </div>
             <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
               <p className="truncate text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
@@ -108,17 +103,7 @@ export function AppShell({
               <div className="flex items-center gap-1.5">
                 <span className="truncate text-sm font-semibold">{brandSub}</span>
                 <div className="size-1.5 shrink-0 rounded-full bg-emerald-500" />
-              {onSignOut && (
-              <button onClick={onSignOut} title="Sair" className="group-data-[collapsible=icon]:hidden shrink-0 rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground">
-                <LogOut className="h-4 w-4" strokeWidth={1.75} />
-              </button>
-            )}
-            </div>
-            {onSignOut && (
-              <button onClick={onSignOut} title="Sair" className="group-data-[collapsible=icon]:hidden shrink-0 rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground">
-                <LogOut className="h-4 w-4" strokeWidth={1.75} />
-              </button>
-            )}
+              </div>
             </div>
             <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground group-data-[collapsible=icon]:hidden" />
           </Link>
@@ -130,20 +115,10 @@ export function AppShell({
           <div className="flex items-center gap-2.5 p-1">
             <div className="grid size-8 shrink-0 place-items-center rounded-full border bg-muted font-mono text-[10px] font-medium">
               {userInitials}
-            {onSignOut && (
-              <button onClick={onSignOut} title="Sair" className="group-data-[collapsible=icon]:hidden shrink-0 rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground">
-                <LogOut className="h-4 w-4" strokeWidth={1.75} />
-              </button>
-            )}
             </div>
             <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
               <p className="truncate text-xs font-semibold">{userName}</p>
               <p className="truncate text-[10px] text-muted-foreground">{userRole}</p>
-            {onSignOut && (
-              <button onClick={onSignOut} title="Sair" className="group-data-[collapsible=icon]:hidden shrink-0 rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground">
-                <LogOut className="h-4 w-4" strokeWidth={1.75} />
-              </button>
-            )}
             </div>
             {onSignOut && (
               <button onClick={onSignOut} title="Sair" className="group-data-[collapsible=icon]:hidden shrink-0 rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground">

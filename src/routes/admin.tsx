@@ -3,6 +3,7 @@ import { AppShell, type NavGroup } from "@/components/shell/AppShell";
 import { LayoutDashboard, Building2, Package, Wallet, ArrowLeftRight, Loader2 } from "lucide-react";
 import { useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAuth as useAuthCtx } from "@/contexts/AuthContext";
 
 const groups: NavGroup[] = [
   { label: "Operação", items: [
@@ -19,7 +20,7 @@ const groups: NavGroup[] = [
 export const Route = createFileRoute("/admin")({ component: AdminLayout });
 
 function AdminLayout() {
-  const { user, profile, loading, isSuperAdmin } = useAuth();
+  const { user, profile, loading, isSuperAdmin, signOut } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -46,6 +47,7 @@ function AdminLayout() {
       userInitials={(profile.nome ?? "OP").split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase()}
       userName={profile.nome}
       userRole="Super Admin"
+      onSignOut={() => signOut().then(() => navigate({ to: "/login" }))}
     >
       <Outlet />
     </AppShell>
