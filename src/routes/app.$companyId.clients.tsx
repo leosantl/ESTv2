@@ -96,7 +96,7 @@ function ClientsPage() {
         {data && <p className="text-right text-[11px] text-muted-foreground">{data.total} registro{data.total !== 1 ? "s" : ""}</p>}
       </div>
       <NewClientDialog open={newOpen} onClose={() => setNewOpen(false)} companyId={companyId}
-        onSave={async (payload) => { await createClient.mutateAsync({ ...payload, company_id: companyId }); setNewOpen(false); }} />
+        onSave={async (payload) => { const r = await createClient.mutateAsync({ ...payload, company_id: companyId }); return r as { id: string }; }} />
       {selected && <ClientDetailDialog client={selected} companyId={companyId} onClose={() => setSelected(null)} />}
     </div>
   );
@@ -262,44 +262,197 @@ function UploadDocDialog({ open, onClose, onSave }: {
   );
 }
 
-function NewClientDialog({ open, onClose, companyId: _cid, onSave }: { open: boolean; onClose: () => void; companyId: string; onSave: (p: Record<string, string>) => Promise<void> }) {
+const DOC_SLOTS = [
+  { key: "cr",          label: "CR",         desc: "Certificado de Registro",                icon: ShieldCheck,    color: "text-blue-500",    bg: "bg-blue-500/10" },
+  { key: "craf",        label: "CRAF",        desc: "Certificado de Registro de Arma de Fogo", icon: FileText,      color: "text-violet-500",  bg: "bg-violet-500/10" },
+  { key: "certificado", label: "Certificado", desc: "Curso, capacitação técnica",              icon: ScrollText,    color: "text-emerald-500", bg: "bg-emerald-500/10" },
+  { key: "contrato",    label: "Contrato",    desc: "Contrato de associado",                   icon: FileSignature, color: "text-amber-500",   bg: "bg-amber-500/10" },
+  { key: "outro",       label: "Outro",       desc: "Demais documentos",                       icon: FolderOpen,    color: "text-rose-500",    bg: "bg-rose-500/10" },
+] as const;
+
+type SlotKey = typeof DOC_SLOTS[number]["key"];
+type PendingDoc = { slotKey: SlotKey; file: File | null; nome: string; vencimento: string; preview: string | null };
+
+function NewClientDialog({ open, onClose, companyId, onSave }: {
+  open: boolean; onClose: () => void; companyId: string;
+  onSave: (p: Record<string, string>) => Promise<{ id: string } | void>;
+}) {
+  const upload = useUploadDocument();
+  const [step, setStep] = useState<"dados" | "documentos">("dados");
+  const [createdClient, setCreatedClient] = useState<{ id: string; nome: string } | null>(null);
   const [form, setForm] = useState({ nome: "", cpf: "", cr: "", cr_validade: "", telefone: "", email: "", calibre_preferido: "" });
   const [saving, setSaving] = useState(false);
+  const [pendingDocs, setPendingDocs] = useState<PendingDoc[]>([]);
+  const [uploadingDocs, setUploadingDocs] = useState(false);
 
-  async function submit(e: React.FormEvent) {
+  function resetAndClose() {
+    setStep("dados");
+    setCreatedClient(null);
+    setForm({ nome: "", cpf: "", cr: "", cr_validade: "", telefone: "", email: "", calibre_preferido: "" });
+    setPendingDocs([]);
+    onClose();
+  }
+
+  async function submitDados(e: React.FormEvent) {
     e.preventDefault();
     if (!form.nome) { toast.error("Nome obrigatório."); return; }
     setSaving(true);
-    try { await onSave(form); setForm({ nome: "", cpf: "", cr: "", cr_validade: "", telefone: "", email: "", calibre_preferido: "" }); }
-    finally { setSaving(false); }
+    try {
+      const result = await onSave(form) as { id: string } | void;
+      const clientId = (result as { id: string })?.id;
+      setCreatedClient({ id: clientId ?? "", nome: form.nome });
+      setStep("documentos");
+    } finally { setSaving(false); }
   }
 
+  function setSlotFile(slotKey: SlotKey, file: File | null) {
+    setPendingDocs((prev) => {
+      const existing = prev.find((d) => d.slotKey === slotKey);
+      const preview = file?.type.startsWith("image/") ? URL.createObjectURL(file!) : null;
+      const nome = file?.name.replace(/\.[^.]+$/, "") ?? "";
+      if (existing) return prev.map((d) => d.slotKey === slotKey ? { ...d, file, preview, nome: d.nome || nome } : d);
+      return [...prev, { slotKey, file, nome, vencimento: "", preview }];
+    });
+  }
+
+  function updateSlot(slotKey: SlotKey, field: "nome" | "vencimento", value: string) {
+    setPendingDocs((prev) => prev.map((d) => d.slotKey === slotKey ? { ...d, [field]: value } : d));
+  }
+
+  function removeSlot(slotKey: SlotKey) {
+    setPendingDocs((prev) => prev.filter((d) => d.slotKey !== slotKey));
+  }
+
+  async function finishWithDocs() {
+    const toUpload = pendingDocs.filter((d) => d.file);
+    if (toUpload.length === 0) { resetAndClose(); return; }
+    for (const d of toUpload) {
+      if (!d.vencimento) { toast.error(`Informe o vencimento de ${d.slotKey.toUpperCase()}.`); return; }
+    }
+    if (!createdClient?.id) { resetAndClose(); return; }
+    setUploadingDocs(true);
+    try {
+      for (const d of toUpload) {
+        await upload.mutateAsync({
+          companyId, file: d.file!, nome: d.nome || d.slotKey.toUpperCase(),
+          tipo: d.slotKey, emissao: new Date().toISOString().slice(0, 10),
+          vencimento: d.vencimento, clientId: createdClient.id,
+        });
+      }
+      toast.success(`${toUpload.length} documento(s) anexado(s)!`);
+      resetAndClose();
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally { setUploadingDocs(false); }
+  }
+
+  const fields = [
+    { key: "nome", label: "Nome completo *", placeholder: "Ricardo S. Almeida", span: true },
+    { key: "cpf", label: "CPF", placeholder: "154.***.**9-22" },
+    { key: "cr", label: "CR", placeholder: "SP-154329" },
+    { key: "cr_validade", label: "Validade do CR", placeholder: "", type: "date" },
+    { key: "telefone", label: "Telefone", placeholder: "(11) 98421-3320" },
+    { key: "email", label: "E-mail", placeholder: "ricardo@cac.br" },
+    { key: "calibre_preferido", label: "Calibre principal", placeholder: "9mm" },
+  ];
+
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader><DialogTitle>Novo atirador</DialogTitle></DialogHeader>
-        <form onSubmit={submit} className="grid gap-3 sm:grid-cols-2">
-          {[
-            { key: "nome", label: "Nome completo *", placeholder: "Ricardo S. Almeida" },
-            { key: "cpf", label: "CPF", placeholder: "154.***.**9-22" },
-            { key: "cr", label: "CR", placeholder: "SP-154329" },
-            { key: "cr_validade", label: "Validade do CR", placeholder: "", type: "date" },
-            { key: "telefone", label: "Telefone", placeholder: "(11) 98421-3320" },
-            { key: "email", label: "E-mail", placeholder: "ricardo@cac.br" },
-            { key: "calibre_preferido", label: "Calibre principal", placeholder: "9mm" },
-          ].map((f) => (
-            <div key={f.key} className={f.key === "nome" ? "sm:col-span-2" : ""}>
-              <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{f.label}</label>
-              <input type={f.type ?? "text"} placeholder={f.placeholder} value={(form as Record<string, string>)[f.key]}
-                onChange={(e) => setForm((p) => ({ ...p, [f.key]: e.target.value }))}
-                className="h-9 w-full rounded-md border bg-background px-3 text-sm outline-none focus:border-foreground/60" />
+    <Dialog open={open} onOpenChange={resetAndClose}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center gap-2 mb-1">
+          {(["dados", "documentos"] as const).map((s, i) => (
+            <div key={s} className="flex items-center gap-2">
+              {i > 0 && <div className={`h-px w-8 ${step === "documentos" ? "bg-foreground" : "bg-border"}`} />}
+              <div className={`flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold transition-colors ${step === s ? "bg-foreground text-background" : step === "documentos" && s === "dados" ? "bg-emerald-500/10 text-emerald-600" : "bg-muted text-muted-foreground"}`}>
+                {step === "documentos" && s === "dados" ? <CheckCircle2 className="h-3 w-3" /> : <span>{i + 1}</span>}
+                {s === "dados" ? "Dados" : "Documentos"}
+              </div>
             </div>
           ))}
-          <div className="sm:col-span-2 flex justify-end gap-2 border-t pt-3">
-            <Button type="button" variant="outline" size="sm" onClick={onClose}>Cancelar</Button>
-            <Button type="submit" size="sm" disabled={saving}>{saving ? "Salvando..." : "Cadastrar"}</Button>
+        </div>
+        <DialogHeader>
+          <DialogTitle>{step === "dados" ? "Novo atirador" : `Documentos — ${createdClient?.nome ?? ""}`}</DialogTitle>
+        </DialogHeader>
+        {step === "dados" ? (
+          <form onSubmit={submitDados} className="grid gap-3 sm:grid-cols-2">
+            {fields.map((f) => (
+              <div key={f.key} className={f.span ? "sm:col-span-2" : ""}>
+                <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{f.label}</label>
+                <input type={f.type ?? "text"} placeholder={f.placeholder} value={(form as Record<string, string>)[f.key]}
+                  onChange={(e) => setForm((p) => ({ ...p, [f.key]: e.target.value }))}
+                  className="h-9 w-full rounded-md border bg-background px-3 text-sm outline-none focus:border-foreground/60" />
+              </div>
+            ))}
+            <div className="sm:col-span-2 flex justify-end gap-2 border-t pt-3">
+              <Button type="button" variant="outline" size="sm" onClick={resetAndClose}>Cancelar</Button>
+              <Button type="submit" size="sm" disabled={saving}>
+                {saving ? <><Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />Salvando...</> : "Próximo \u2192 Documentos"}
+              </Button>
+            </div>
+          </form>
+        ) : (
+          <div className="space-y-3">
+            <p className="text-xs text-muted-foreground">Atirador cadastrado! Adicione os documentos agora ou clique em "Concluir" para fazer depois.</p>
+            {DOC_SLOTS.map((slot) => {
+              const Icon = slot.icon;
+              const pending = pendingDocs.find((d) => d.slotKey === slot.key);
+              const hasFile = !!pending?.file;
+              return (
+                <div key={slot.key} className={`rounded-xl border overflow-hidden transition-colors ${hasFile ? "border-foreground/20 bg-muted/20" : "bg-card"}`}>
+                  <div className="flex items-center gap-3 px-4 py-3">
+                    <div className={`grid size-9 shrink-0 place-items-center rounded-lg ${slot.bg}`}>
+                      <Icon className={`h-4 w-4 ${slot.color}`} strokeWidth={1.75} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold">{slot.label}</p>
+                      <p className="text-[11px] text-muted-foreground truncate">{slot.desc}</p>
+                    </div>
+                    {hasFile ? (
+                      <div className="flex items-center gap-1">
+                        <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                        <Button variant="ghost" size="sm" className="text-xs text-muted-foreground h-7" onClick={() => removeSlot(slot.key)}>remover</Button>
+                      </div>
+                    ) : (
+                      <label className="cursor-pointer">
+                        <span className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors">
+                          <Upload className="h-3 w-3" /> Anexar
+                        </span>
+                        <input type="file" accept=".pdf,.jpg,.jpeg,.png" className="sr-only"
+                          onChange={(e) => { const f = e.target.files?.[0]; if (f) setSlotFile(slot.key, f); }} />
+                      </label>
+                    )}
+                  </div>
+                  {hasFile && (
+                    <div className="border-t px-4 pb-3 pt-2 grid grid-cols-2 gap-3">
+                      {pending?.preview && <div className="col-span-2"><img src={pending.preview} alt="preview" className="max-h-20 rounded object-contain" /></div>}
+                      <div className="col-span-2">
+                        <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Nome do arquivo</label>
+                        <input value={pending?.nome ?? ""} onChange={(e) => updateSlot(slot.key, "nome", e.target.value)}
+                          placeholder={`${slot.label} \u2014 ${createdClient?.nome ?? ""}`}
+                          className="h-8 w-full rounded-md border bg-background px-3 text-sm outline-none" />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Vencimento *</label>
+                        <input type="date" value={pending?.vencimento ?? ""} onChange={(e) => updateSlot(slot.key, "vencimento", e.target.value)}
+                          className="h-8 w-full rounded-md border bg-background px-3 text-sm outline-none" />
+                      </div>
+                      <div className="flex items-end"><p className="text-[10px] text-muted-foreground">{pending?.file?.name}</p></div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+            <div className="flex justify-between gap-2 border-t pt-3">
+              <Button type="button" variant="ghost" size="sm" className="text-muted-foreground" onClick={resetAndClose}>Pular \u2014 fazer depois</Button>
+              <Button size="sm" onClick={finishWithDocs} disabled={uploadingDocs}>
+                {uploadingDocs ? <><Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />Enviando...</> :
+                  pendingDocs.filter((d) => d.file).length > 0
+                    ? `Salvar ${pendingDocs.filter((d) => d.file).length} documento(s) e concluir`
+                    : "Concluir cadastro"}
+              </Button>
+            </div>
           </div>
-        </form>
+        )}
       </DialogContent>
     </Dialog>
   );
