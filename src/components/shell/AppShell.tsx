@@ -75,7 +75,6 @@ export function AppShell({
   userName,
   userRole,
   onSignOut,
-  onSignOut,
   children,
 }: {
   groups: NavGroup[];
@@ -86,7 +85,6 @@ export function AppShell({
   userInitials: string;
   userName: string;
   userRole: string;
-  onSignOut?: () => void;
   onSignOut?: () => void;
   children: ReactNode;
 }) {
