@@ -3,10 +3,11 @@ import { PageHeader } from "@/components/shell/PageHeader";
 import { StatusBadge } from "@/components/shell/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Loader2, Download, FileText, Trash2, Eye, Upload, CheckCircle2, ShieldCheck, ScrollText, FileSignature, FolderOpen } from "lucide-react";
+import { Plus, Search, Loader2, Download, FileText, Trash2, Eye, Upload, CheckCircle2, ShieldCheck, ScrollText, FileSignature, FolderOpen, Camera, ScanFace, X } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useState, useRef } from "react";
-import { useClients, useCreateClient, useDeleteClient, useDocuments, useUploadDocument, useDocumentSignedUrl } from "@/hooks/useSupabase";
+import { useClients, useCreateClient, useDeleteClient, useDocuments, useUploadDocument, useDocumentSignedUrl, useSaveClientFace } from "@/hooks/useSupabase";
+import { getDescriptor } from "@/lib/face-recognition";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 
@@ -278,19 +279,81 @@ function NewClientDialog({ open, onClose, companyId, onSave }: {
   onSave: (p: Record<string, string>) => Promise<{ id: string } | void>;
 }) {
   const upload = useUploadDocument();
-  const [step, setStep] = useState<"dados" | "documentos">("dados");
+  const saveFace = useSaveClientFace();
+  const [step, setStep] = useState<"dados" | "foto" | "documentos">("dados");
   const [createdClient, setCreatedClient] = useState<{ id: string; nome: string } | null>(null);
   const [form, setForm] = useState({ nome: "", cpf: "", cr: "", cr_validade: "", telefone: "", email: "", calibre_preferido: "" });
   const [saving, setSaving] = useState(false);
   const [pendingDocs, setPendingDocs] = useState<PendingDoc[]>([]);
   const [uploadingDocs, setUploadingDocs] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [cameraOn, setCameraOn] = useState(false);
+  const [streamRef, setStreamRef] = useState<MediaStream | null>(null);
+  const [capturedFile, setCapturedFile] = useState<File | null>(null);
+  const [capturedPreview, setCapturedPreview] = useState<string | null>(null);
+  const [savingFace, setSavingFace] = useState(false);
 
   function resetAndClose() {
     setStep("dados");
     setCreatedClient(null);
     setForm({ nome: "", cpf: "", cr: "", cr_validade: "", telefone: "", email: "", calibre_preferido: "" });
     setPendingDocs([]);
+    stopCamera();
+    setCapturedFile(null);
+    setCapturedPreview(null);
     onClose();
+  }
+
+  function stopCamera() {
+    streamRef?.getTracks().forEach((t) => t.stop());
+    setStreamRef(null);
+    setCameraOn(false);
+  }
+
+  async function startCamera() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480, facingMode: "user" } });
+      if (videoRef.current) { videoRef.current.srcObject = stream; videoRef.current.play(); }
+      setStreamRef(stream);
+      setCameraOn(true);
+    } catch { toast.error("Câmera não disponível."); }
+  }
+
+  function capturePhoto() {
+    if (!videoRef.current) return;
+    const canvas = document.createElement("canvas");
+    canvas.width = videoRef.current.videoWidth;
+    canvas.height = videoRef.current.videoHeight;
+    canvas.getContext("2d")!.drawImage(videoRef.current, 0, 0);
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      const file = new File([blob], "facial.jpg", { type: "image/jpeg" });
+      setCapturedFile(file);
+      setCapturedPreview(URL.createObjectURL(blob));
+      stopCamera();
+    }, "image/jpeg", 0.9);
+  }
+
+  function selectPhotoFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setCapturedFile(file);
+    setCapturedPreview(URL.createObjectURL(file));
+  }
+
+  async function saveFacePhoto() {
+    if (!capturedFile || !createdClient?.id) { setStep("documentos"); return; }
+    setSavingFace(true);
+    try {
+      const img = new Image();
+      img.src = capturedPreview!;
+      await new Promise((r) => { img.onload = r; });
+      const descriptor = await getDescriptor(img).catch(() => null);
+      await saveFace.mutateAsync({ companyId, clientId: createdClient.id, file: capturedFile, descriptor: descriptor ?? new Float32Array(128) });
+      setStep("documentos");
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally { setSavingFace(false); }
   }
 
   async function submitDados(e: React.FormEvent) {
@@ -301,7 +364,7 @@ function NewClientDialog({ open, onClose, companyId, onSave }: {
       const result = await onSave(form) as { id: string } | void;
       const clientId = (result as { id: string })?.id;
       setCreatedClient({ id: clientId ?? "", nome: form.nome });
-      setStep("documentos");
+      setStep("foto");
     } finally { setSaving(false); }
   }
 
@@ -356,24 +419,34 @@ function NewClientDialog({ open, onClose, companyId, onSave }: {
     { key: "calibre_preferido", label: "Calibre principal", placeholder: "9mm" },
   ];
 
+  const STEPS = ["dados", "foto", "documentos"] as const;
+
   return (
     <Dialog open={open} onOpenChange={resetAndClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center gap-2 mb-1">
-          {(["dados", "documentos"] as const).map((s, i) => (
-            <div key={s} className="flex items-center gap-2">
-              {i > 0 && <div className={`h-px w-8 ${step === "documentos" ? "bg-foreground" : "bg-border"}`} />}
-              <div className={`flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold transition-colors ${step === s ? "bg-foreground text-background" : step === "documentos" && s === "dados" ? "bg-emerald-500/10 text-emerald-600" : "bg-muted text-muted-foreground"}`}>
-                {step === "documentos" && s === "dados" ? <CheckCircle2 className="h-3 w-3" /> : <span>{i + 1}</span>}
-                {s === "dados" ? "Dados" : "Documentos"}
+          {STEPS.map((s, i) => {
+            const past = STEPS.indexOf(step) > i;
+            const active = step === s;
+            return (
+              <div key={s} className="flex items-center gap-2">
+                {i > 0 && <div className={`h-px w-8 ${STEPS.indexOf(step) >= i ? "bg-foreground" : "bg-border"}`} />}
+                <div className={`flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold transition-colors ${active ? "bg-foreground text-background" : past ? "bg-emerald-500/10 text-emerald-600" : "bg-muted text-muted-foreground"}`}>
+                  {past ? <CheckCircle2 className="h-3 w-3" /> : <span>{i + 1}</span>}
+                  {s === "dados" ? "Dados" : s === "foto" ? "Foto facial" : "Documentos"}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
+
         <DialogHeader>
-          <DialogTitle>{step === "dados" ? "Novo atirador" : `Documentos — ${createdClient?.nome ?? ""}`}</DialogTitle>
+          <DialogTitle>
+            {step === "dados" ? "Novo atirador" : step === "foto" ? `Foto facial — ${createdClient?.nome ?? ""}` : `Documentos — ${createdClient?.nome ?? ""}`}
+          </DialogTitle>
         </DialogHeader>
-        {step === "dados" ? (
+
+        {step === "dados" && (
           <form onSubmit={submitDados} className="grid gap-3 sm:grid-cols-2">
             {fields.map((f) => (
               <div key={f.key} className={f.span ? "sm:col-span-2" : ""}>
@@ -386,13 +459,72 @@ function NewClientDialog({ open, onClose, companyId, onSave }: {
             <div className="sm:col-span-2 flex justify-end gap-2 border-t pt-3">
               <Button type="button" variant="outline" size="sm" onClick={resetAndClose}>Cancelar</Button>
               <Button type="submit" size="sm" disabled={saving}>
-                {saving ? <><Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />Salvando...</> : "Próximo \u2192 Documentos"}
+                {saving ? <><Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />Salvando...</> : "Próximo → Foto facial"}
               </Button>
             </div>
           </form>
-        ) : (
+        )}
+
+        {step === "foto" && (
+          <div className="space-y-4">
+            <p className="text-xs text-muted-foreground">
+              A foto facial é usada para reconhecimento automático na entrada e saída da pista.
+              Você pode pular esta etapa e cadastrar depois.
+            </p>
+            {capturedPreview ? (
+              <div className="relative">
+                <img src={capturedPreview} alt="Foto facial" className="w-full max-h-64 rounded-xl object-cover" />
+                <button onClick={() => { setCapturedFile(null); setCapturedPreview(null); }}
+                  className="absolute top-2 right-2 rounded-full bg-black/60 p-1.5 text-white hover:bg-black/80">
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ) : cameraOn ? (
+              <div className="relative">
+                <video ref={videoRef} className="w-full rounded-xl" autoPlay muted playsInline />
+                <div className="absolute inset-0 flex items-end justify-center pb-4 gap-2">
+                  <Button size="sm" onClick={capturePhoto} className="bg-white text-black hover:bg-white/90 shadow-lg">
+                    <Camera className="mr-1.5 h-3.5 w-3.5" /> Capturar
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={stopCamera} className="bg-black/40 text-white border-white/30 hover:bg-black/60">
+                    Cancelar
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center gap-4 rounded-xl border-2 border-dashed py-10 text-muted-foreground">
+                <ScanFace className="h-12 w-12 opacity-30" />
+                <p className="text-sm">Nenhuma foto capturada</p>
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={startCamera}>
+                    <Camera className="mr-1.5 h-3.5 w-3.5" /> Usar câmera
+                  </Button>
+                  <label>
+                    <span className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium cursor-pointer hover:bg-muted transition-colors">
+                      <Upload className="h-3 w-3" /> Enviar foto
+                    </span>
+                    <input type="file" accept="image/*" className="sr-only" onChange={selectPhotoFile} />
+                  </label>
+                </div>
+              </div>
+            )}
+            <div className="flex justify-between gap-2 border-t pt-3">
+              <Button type="button" variant="ghost" size="sm" className="text-muted-foreground"
+                onClick={() => { stopCamera(); setStep("documentos"); }}>
+                Pular — fazer depois
+              </Button>
+              <Button size="sm" onClick={saveFacePhoto} disabled={savingFace || !capturedFile}>
+                {savingFace ? <><Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />Salvando...</> : "Salvar foto → Documentos"}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {step === "documentos" && (
           <div className="space-y-3">
-            <p className="text-xs text-muted-foreground">Atirador cadastrado! Adicione os documentos agora ou clique em "Concluir" para fazer depois.</p>
+            <p className="text-xs text-muted-foreground">
+              Adicione os documentos agora ou clique em "Concluir" para fazer depois.
+            </p>
             {DOC_SLOTS.map((slot) => {
               const Icon = slot.icon;
               const pending = pendingDocs.find((d) => d.slotKey === slot.key);
@@ -424,11 +556,13 @@ function NewClientDialog({ open, onClose, companyId, onSave }: {
                   </div>
                   {hasFile && (
                     <div className="border-t px-4 pb-3 pt-2 grid grid-cols-2 gap-3">
-                      {pending?.preview && <div className="col-span-2"><img src={pending.preview} alt="preview" className="max-h-20 rounded object-contain" /></div>}
+                      {pending?.preview && (
+                        <div className="col-span-2"><img src={pending.preview} alt="preview" className="max-h-20 rounded object-contain" /></div>
+                      )}
                       <div className="col-span-2">
                         <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Nome do arquivo</label>
                         <input value={pending?.nome ?? ""} onChange={(e) => updateSlot(slot.key, "nome", e.target.value)}
-                          placeholder={`${slot.label} \u2014 ${createdClient?.nome ?? ""}`}
+                          placeholder={`${slot.label} — ${createdClient?.nome ?? ""}`}
                           className="h-8 w-full rounded-md border bg-background px-3 text-sm outline-none" />
                       </div>
                       <div>
@@ -436,14 +570,18 @@ function NewClientDialog({ open, onClose, companyId, onSave }: {
                         <input type="date" value={pending?.vencimento ?? ""} onChange={(e) => updateSlot(slot.key, "vencimento", e.target.value)}
                           className="h-8 w-full rounded-md border bg-background px-3 text-sm outline-none" />
                       </div>
-                      <div className="flex items-end"><p className="text-[10px] text-muted-foreground">{pending?.file?.name}</p></div>
+                      <div className="flex items-end">
+                        <p className="text-[10px] text-muted-foreground">{pending?.file?.name}</p>
+                      </div>
                     </div>
                   )}
                 </div>
               );
             })}
             <div className="flex justify-between gap-2 border-t pt-3">
-              <Button type="button" variant="ghost" size="sm" className="text-muted-foreground" onClick={resetAndClose}>Pular \u2014 fazer depois</Button>
+              <Button type="button" variant="ghost" size="sm" className="text-muted-foreground" onClick={resetAndClose}>
+                Pular — fazer depois
+              </Button>
               <Button size="sm" onClick={finishWithDocs} disabled={uploadingDocs}>
                 {uploadingDocs ? <><Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />Enviando...</> :
                   pendingDocs.filter((d) => d.file).length > 0

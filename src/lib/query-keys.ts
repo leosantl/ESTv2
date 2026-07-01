@@ -54,6 +54,16 @@ export const queryKeys = {
     subscription: (companyId: string) => ["subscription", companyId] as const,
     invoices: (companyId: string) => ["invoices", companyId] as const,
   },
+  range: {
+    sessions: (companyId: string, date?: string) =>
+      ["range-sessions", companyId, date ?? "today"] as const,
+    scope: (companyId: string) => ["range-sessions", companyId] as const,
+    descriptors: (companyId: string) => ["face-descriptors", companyId] as const,
+    activeSession: (companyId: string, clientId?: string) =>
+      ["active-session", companyId, clientId ?? ""] as const,
+    report: (companyId: string, from: string, to: string) =>
+      ["range-report", companyId, from, to] as const,
+  },
   admin: {
     kpis: ["admin-kpis"] as const,
     invoices: ["admin-invoices"] as const,

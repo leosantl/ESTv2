@@ -2,7 +2,7 @@ import { createFileRoute, Outlet, useParams, useNavigate } from "@tanstack/react
 import { AppShell, type NavGroup } from "@/components/shell/AppShell";
 import {
   LayoutDashboard, Users, Crosshair, Package, FileText,
-  CalendarDays, Wallet, UserCog, CreditCard, ArrowLeftRight,
+  CalendarDays, Wallet, UserCog, CreditCard, ArrowLeftRight, ScanFace,
 } from "lucide-react";
 import { useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -74,6 +74,7 @@ function CompanyLayout() {
         { title: "Atiradores", url: `${base}/clients`, icon: Users },
         { title: "Acervo", url: `${base}/weapons`, icon: Crosshair },
         { title: "Munições", url: `${base}/ammo`, icon: Package },
+        { title: "Pista", url: `${base}/range`, icon: ScanFace },
       ],
     },
     {

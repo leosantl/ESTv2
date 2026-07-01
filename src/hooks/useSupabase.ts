@@ -19,3 +19,4 @@ export * from "./queries/documents";
 export * from "./queries/users";
 export * from "./queries/billing";
 export * from "./queries/admin";
+export * from "./queries/range";
