@@ -109,6 +109,7 @@ function CompanyLayout() {
       userInitials={(profile?.nome ?? "U").split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase()}
       userName={profile?.nome ?? company.responsible}
       userRole={roleLabel[profile?.role ?? ""] ?? "Usuário"}
+      onSignOut={() => signOut().then(() => navigate({ to: "/login" }))}
     >
       <Outlet />
     </AppShell>
