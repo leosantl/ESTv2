@@ -3,7 +3,7 @@ import { PageHeader } from "@/components/shell/PageHeader";
 import { StatusBadge } from "@/components/shell/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Loader2, Download, FileText, Trash2, Eye, Upload } from "lucide-react";
+import { Plus, Search, Loader2, Download, FileText, Trash2, Eye, Upload, CheckCircle2, ShieldCheck, ScrollText, FileSignature, FolderOpen } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useState, useRef } from "react";
 import { useClients, useCreateClient, useDeleteClient, useDocuments, useUploadDocument, useDocumentSignedUrl } from "@/hooks/useSupabase";
