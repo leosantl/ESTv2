@@ -16,7 +16,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Link, useRouterState } from "@tanstack/react-router";
-import { ChevronsUpDown, Search, Bell, type LucideIcon } from "lucide-react";
+import { ChevronsUpDown, Search, Bell, LogOut, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export type NavGroup = {
@@ -84,6 +84,7 @@ export function AppShell({
   userInitials: string;
   userName: string;
   userRole: string;
+  onSignOut?: () => void;
   children: ReactNode;
 }) {
   return (
