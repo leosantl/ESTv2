@@ -313,9 +313,14 @@ function NewClientDialog({ open, onClose, companyId, onSave }: {
   async function startCamera() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480, facingMode: "user" } });
-      if (videoRef.current) { videoRef.current.srcObject = stream; videoRef.current.play(); }
       setStreamRef(stream);
       setCameraOn(true);
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.play().catch(() => {});
+        }
+      }, 50);
     } catch { toast.error("Câmera não disponível."); }
   }
 
