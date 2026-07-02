@@ -174,7 +174,7 @@ function StepEmpresa({ form, onChange, password, onPassword }: {
     { key: "razaoSocial", label: "Razão social *", span: 2 },
     { key: "nomeFantasia", label: "Nome fantasia *", span: 2 },
     { key: "cnpj", label: "CNPJ", span: 1 },
-    { key: "tipo", label: "Tipo", span: 1, type: "select", options: ["Clube", "Estande", "Despachante", "Instrutor"] },
+    { key: "tipo", label: "Tipo", span: 1, type: "select", options: ["Clube", "Loja", "Despachante", "Instrutor"] },
     { key: "email", label: "E-mail *", span: 1, type: "email" },
     { key: "telefone", label: "Telefone", span: 1 },
     { key: "cidade", label: "Cidade", span: 2 },
