@@ -7,7 +7,7 @@ import {
   LogIn, LogOut, Clock, Search, Loader2, Target, ScanFace,
   CheckCircle2, AlertTriangle, ChevronRight, Camera, X, BarChart3,
 } from "lucide-react";
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { toast } from "sonner";
 import {
   useRangeSessions, useClientDescriptors, useStartSession,
@@ -262,88 +262,97 @@ function RangePage() {
   );
 }
 
+/* ─── CameraPanel ─── */
 function CameraPanel({
   mode,
   onDescriptor,
 }: {
   mode: "entrada" | "saida";
-  onDescriptor: (d: Float32Array) => void;
+  onDescriptor: (d: Float32Array) => Promise<void>;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const scanningRef = useRef(false);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [cameraOn, setCameraOn] = useState(false);
-  const [scanning, setScanning] = useState(false);
-  const [streamRef, setStreamRef] = useState<MediaStream | null>(null);
+  const [status, setStatus] = useState<"idle" | "scanning" | "found">("idle");
+
+  function stopCamera() {
+    if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+    setCameraOn(false);
+    setStatus("idle");
+    scanningRef.current = false;
+  }
 
   async function startCamera() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 360, facingMode: "user" } });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.play();
-      }
-      setStreamRef(stream);
+      streamRef.current = stream;
       setCameraOn(true);
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.play().catch(() => {});
+        }
+        intervalRef.current = setInterval(autoScan, 2000);
+      }, 50);
     } catch {
-      toast.error("Câmera não disponível. Use a busca manual.");
+      toast.error("Camera nao disponivel. Use a busca manual.");
     }
   }
 
-  function stopCamera() {
-    streamRef?.getTracks().forEach((t) => t.stop());
-    setStreamRef(null);
-    setCameraOn(false);
-  }
-
-  async function identify() {
-    if (!videoRef.current) return;
-    setScanning(true);
+  async function autoScan() {
+    if (scanningRef.current || !videoRef.current) return;
+    scanningRef.current = true;
+    setStatus("scanning");
     try {
       const descriptor = await getDescriptor(videoRef.current);
-      if (!descriptor) {
-        toast.error("Nenhuma face detectada. Olhe para a câmera.");
-        return;
-      }
-      onDescriptor(descriptor);
-    } catch (e) {
-      toast.error("Erro no reconhecimento: " + (e as Error).message);
+      if (!descriptor) { setStatus("idle"); return; }
+      setStatus("found");
+      stopCamera();
+      await onDescriptor(descriptor);
+    } catch {
+      setStatus("idle");
     } finally {
-      setScanning(false);
+      scanningRef.current = false;
     }
   }
 
-  const color = mode === "entrada" ? "bg-emerald-500" : "bg-rose-500";
+  useEffect(() => () => stopCamera(), []);
+
   const Icon = mode === "entrada" ? LogIn : LogOut;
 
   return (
     <div className="rounded-xl border bg-card overflow-hidden">
       <div className={`flex items-center gap-2 px-4 py-3 text-sm font-semibold ${mode === "entrada" ? "bg-emerald-500/10 text-emerald-700" : "bg-rose-500/10 text-rose-700"}`}>
         <Icon className="h-4 w-4" />
-        {mode === "entrada" ? "Identificação — Entrada" : "Identificação — Saída"}
+        {mode === "entrada" ? "Identificacao - Entrada" : "Identificacao - Saida"}
+        {cameraOn && (
+          <span className="ml-auto flex items-center gap-1 text-[11px] font-normal text-muted-foreground">
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            Verificando automaticamente...
+          </span>
+        )}
       </div>
-
       <div className="p-4 space-y-3">
         <div className={`relative rounded-lg overflow-hidden bg-muted flex items-center justify-center ${cameraOn ? "" : "h-52"}`}>
-          <video
-            ref={videoRef}
-            className={`w-full rounded-lg ${cameraOn ? "block" : "hidden"}`}
-            autoPlay
-            muted
-            playsInline
-          />
+          <video ref={videoRef} className={`w-full rounded-lg ${cameraOn ? "block" : "hidden"}`} autoPlay muted playsInline />
           {!cameraOn && (
             <div className="flex flex-col items-center gap-3 py-10 text-muted-foreground">
               <Camera className="h-12 w-12 opacity-30" />
-              <p className="text-sm">Câmera desligada</p>
+              <p className="text-sm">Camera desligada</p>
               <Button size="sm" onClick={startCamera} className="mt-1">
-                <Camera className="mr-1.5 h-3.5 w-3.5" /> Ativar câmera
+                <Camera className="mr-1.5 h-3.5 w-3.5" /> Ativar camera
               </Button>
             </div>
           )}
-          {cameraOn && scanning && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+          {cameraOn && status === "scanning" && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/30 pointer-events-none">
               <div className="flex flex-col items-center gap-2 text-white">
-                <Loader2 className="h-8 w-8 animate-spin" />
-                <p className="text-sm font-medium">Reconhecendo...</p>
+                <ScanFace className="h-10 w-10 animate-pulse" />
+                <p className="text-xs font-medium">Analisando rosto...</p>
               </div>
             </div>
           )}
@@ -353,21 +362,12 @@ function CameraPanel({
             </button>
           )}
         </div>
-
-        {cameraOn && (
-          <Button className={`w-full gap-2 ${color} text-white hover:opacity-90`} onClick={identify} disabled={scanning}>
-            <ScanFace className="h-4 w-4" />
-            {scanning ? "Analisando..." : "Identificar por facial"}
-          </Button>
-        )}
-
-        <p className="text-center text-[11px] text-muted-foreground">
-          ou use a busca manual ao lado
-        </p>
+        <p className="text-center text-[11px] text-muted-foreground">ou use a busca manual ao lado</p>
       </div>
     </div>
   );
 }
+
 
 function EntradaCard({
   client, onConfirm, onCancel, loading,
