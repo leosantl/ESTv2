@@ -31,7 +31,7 @@ export async function getDescriptor(
 ): Promise<Float32Array | null> {
   await loadFaceModels();
   const det = await faceapi
-    .detectSingleFace(el, new faceapi.TinyFaceDetectorOptions({ inputSize: 320 }))
+    .detectSingleFace(el, new faceapi.TinyFaceDetectorOptions({ inputSize: 160 }))
     .withFaceLandmarks(true)
     .withFaceDescriptor();
   return det?.descriptor ?? null;

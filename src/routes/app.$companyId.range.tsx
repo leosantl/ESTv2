@@ -296,7 +296,7 @@ function CameraPanel({
           videoRef.current.srcObject = stream;
           videoRef.current.play().catch(() => {});
         }
-        intervalRef.current = setInterval(autoScan, 2000);
+        intervalRef.current = setInterval(autoScan, 600);
       }, 50);
     } catch {
       toast.error("Camera nao disponivel. Use a busca manual.");
