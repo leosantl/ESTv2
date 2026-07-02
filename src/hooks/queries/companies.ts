@@ -10,7 +10,7 @@ import { formatDate, formatRelative, mapCompanyStatus } from "@/lib/formatters";
 import { queryKeys } from "@/lib/query-keys";
 import { supabase } from "@/lib/supabase";
 
-type CompanyType = "Clube" | "Estande" | "Empresa";
+type CompanyType = "Clube" | "Loja" | "Empresa";
 
 export function useCompanies() {
   return useQuery({
