@@ -10,6 +10,8 @@ let modelsLoaded = false;
 
 export async function loadFaceModels(): Promise<void> {
   if (modelsLoaded) return;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (faceapi as any).tf.ready();
   await Promise.all([
     faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
     faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL),
