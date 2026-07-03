@@ -2,7 +2,7 @@ import { createFileRoute, Outlet, useParams, useNavigate } from "@tanstack/react
 import { AppShell, type NavGroup } from "@/components/shell/AppShell";
 import {
   LayoutDashboard, Users, Crosshair, Package, FileText,
-  CalendarDays, Wallet, UserCog, CreditCard, ArrowLeftRight, ScanFace,
+  CalendarDays, Wallet, UserCog, CreditCard, ArrowLeftRight, ScanFace, Store,
 } from "lucide-react";
 import { useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -83,6 +83,7 @@ function CompanyLayout() {
         { title: "Documentos", url: `${base}/documents`, icon: FileText },
         { title: "Agenda", url: `${base}/schedule`, icon: CalendarDays },
         { title: "Financeiro", url: `${base}/finance`, icon: Wallet },
+        { title: "Loja", url: `${base}/loja`, icon: Store },
       ],
     },
     {

@@ -69,4 +69,26 @@ export const queryKeys = {
     invoices: ["admin-invoices"] as const,
     mrrSeries: ["mrr-series"] as const,
   },
+  loja: {
+    kpis: (companyId: string) => ["loja-kpis", companyId] as const,
+    vendaSerie: (companyId: string) => ["loja-venda-serie", companyId] as const,
+    produtos: (companyId: string, search?: string, tipo?: string, catId?: string) =>
+      ["loja-produtos", companyId, search ?? "", tipo ?? "", catId ?? ""] as const,
+    produto: (id: string) => ["loja-produto", id] as const,
+    categorias: (companyId: string) => ["loja-categorias", companyId] as const,
+    fornecedores: (companyId: string, search?: string) =>
+      ["loja-fornecedores", companyId, search ?? ""] as const,
+    estoque: (companyId: string, produtoId?: string) =>
+      ["loja-estoque", companyId, produtoId ?? ""] as const,
+    clientes: (companyId: string, search?: string, tipo?: string, status?: string) =>
+      ["loja-clientes", companyId, search ?? "", tipo ?? "", status ?? ""] as const,
+    clienteDocs: (clienteId: string) => ["loja-cliente-docs", clienteId] as const,
+    vendas: (companyId: string, status?: string, page?: number) =>
+      ["loja-vendas", companyId, status ?? "", page ?? 1] as const,
+    compras: (companyId: string, status?: string) =>
+      ["loja-compras", companyId, status ?? ""] as const,
+    financeiro: (companyId: string, tipo?: string, status?: string) =>
+      ["loja-financeiro", companyId, tipo ?? "", status ?? ""] as const,
+    auditoria: (companyId: string) => ["loja-auditoria", companyId] as const,
+  },
 } as const;
