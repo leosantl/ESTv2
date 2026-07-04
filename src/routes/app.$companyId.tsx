@@ -40,7 +40,7 @@ function CompanyLayout() {
   }
 
   const base = `/app/${companyId}`;
-  const planId = (company.planData as { id?: string }|null)?.id as PlanId|undefined;
+  const planId = company.planId as PlanId | undefined;
   const isSuperAdmin = profile?.role === "super_admin";
   const gate = (feature: Parameters<typeof planHasFeature>[1]) => isSuperAdmin || planHasFeature(planId, feature);
 

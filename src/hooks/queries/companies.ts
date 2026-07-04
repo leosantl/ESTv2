@@ -62,6 +62,11 @@ export function useCompany(companyId: string) {
         logoInitials: data.logo_initials,
         subscription: data.subscriptions,
         planData: data.plans,
+        planId: (
+          (data.subscriptions as { plan_id?: string } | null)?.plan_id ??
+          data.plans?.id ??
+          data.plan_id
+        ) as string,
       };
     },
     enabled: !!companyId,
