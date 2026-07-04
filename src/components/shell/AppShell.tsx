@@ -1,7 +1,7 @@
 import { type ReactNode, useState } from "react";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarInset, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Search, Bell, LogOut, Lock, ArrowUpRight, Flame, type LucideIcon } from "lucide-react";
+import { ChevronsUpDown, Search, Bell, LogOut, Lock, ArrowUpRight, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { PLAN_LABEL, type PlanId } from "@/lib/plan-features";
@@ -85,12 +85,15 @@ export function AppShell({ groups, brandLabel, brandSub, brandInitials, brandHre
       <Sidebar collapsible="icon" className="border-r">
         <SidebarHeader className="border-b">
           <Link to={brandHref} className="flex items-center gap-2.5 px-1 py-1.5">
-            <div className="grid size-8 shrink-0 place-items-center rounded bg-accent text-accent-foreground">
-              <Flame className="h-4 w-4" />
-            </div>
+            <div className="grid size-8 shrink-0 place-items-center rounded bg-accent text-[10px] font-bold tracking-tighter text-accent-foreground">{brandInitials}</div>
             <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
-              <span className="truncate text-sm font-bold">{brandLabel}</span>
+              <p className="truncate text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">{brandLabel}</p>
+              <div className="flex items-center gap-1.5">
+                <span className="truncate text-sm font-semibold">{brandSub}</span>
+                <div className="size-1.5 shrink-0 rounded-full bg-emerald-500" />
+              </div>
             </div>
+            <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground group-data-[collapsible=icon]:hidden" />
           </Link>
         </SidebarHeader>
         <SidebarContent><SidebarSections groups={groups} onLockedClick={setUpgradeItem} /></SidebarContent>
