@@ -19,7 +19,8 @@ function UpgradeModal({ open, onClose, item, billingUrl }: { open: boolean; onCl
           <div className="mx-auto mb-3 grid size-12 place-items-center rounded-full bg-accent/20"><Lock className="h-5 w-5 text-accent-foreground" /></div>
           <DialogTitle className="text-center">Recurso bloqueado</DialogTitle>
           <DialogDescription className="text-center">
-            <strong>{item.title}</strong> está disponível no plano <span className="font-semibold text-foreground">{planLabel}</span> ou superior.
+            <strong>{item.title}</strong> está disponível no plano{" "}
+            <span className="font-semibold text-foreground">{planLabel}</span> ou superior.
           </DialogDescription>
         </DialogHeader>
         <div className="mt-2 flex flex-col gap-2">
@@ -111,8 +112,7 @@ export function AppShell({ groups, brandLabel, brandSub, brandInitials, brandHre
         <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b bg-background/95 px-4 backdrop-blur-sm">
           <SidebarTrigger className="-ml-1" />
           <div className="hidden flex-1 items-center gap-2 rounded-md border bg-muted/30 px-2.5 py-1.5 text-xs text-muted-foreground sm:flex">
-            <Search className="h-3.5 w-3.5" />
-            <span>Buscar atiradores, armas, documentos...</span>
+            <Search className="h-3.5 w-3.5" /><span>Buscar atiradores, armas, documentos...</span>
             <kbd className="ml-auto font-mono text-[10px]">⌘K</kbd>
           </div>
           <div className="flex-1 sm:hidden" />
