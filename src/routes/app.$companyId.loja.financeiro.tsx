@@ -97,6 +97,7 @@ function FinanceiroPage() {
         ) : (lancamentos as Record<string, unknown>[]).length === 0 ? (
           <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">Nenhum lançamento.</div>
         ) : (
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -135,6 +136,7 @@ function FinanceiroPage() {
               ))}
             </TableBody>
           </Table>
+          </div>
         )}
       </div>
 

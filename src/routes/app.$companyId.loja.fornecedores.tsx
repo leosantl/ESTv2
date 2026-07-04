@@ -68,6 +68,7 @@ function FornecedoresPage() {
         ) : (forn as Forn[]).length === 0 ? (
           <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">Nenhum fornecedor cadastrado.</div>
         ) : (
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -97,6 +98,7 @@ function FornecedoresPage() {
               ))}
             </TableBody>
           </Table>
+          </div>
         )}
       </div>
 

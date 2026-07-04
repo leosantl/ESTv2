@@ -28,6 +28,7 @@ function UsersPage() {
       <div className="space-y-4 p-4 sm:p-6 lg:p-8">
         <div className="rounded-lg border bg-card">
           {isLoading ? <div className="flex h-40 items-center justify-center"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div> : (
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader><TableRow>
                 <TableHead className="text-[10px] font-bold uppercase tracking-wider">Nome</TableHead>
@@ -58,6 +59,7 @@ function UsersPage() {
                 {!users.length && <TableRow><TableCell colSpan={6} className="py-8 text-center text-sm text-muted-foreground">Nenhum usuário.</TableCell></TableRow>}
               </TableBody>
             </Table>
+            </div>
           )}
         </div>
       </div>

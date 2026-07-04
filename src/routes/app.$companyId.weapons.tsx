@@ -39,6 +39,7 @@ function WeaponsPage() {
           {isLoading ? (
             <div className="flex h-40 items-center justify-center"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
           ) : (
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -64,6 +65,7 @@ function WeaponsPage() {
                 {!weapons.length && <TableRow><TableCell colSpan={6} className="py-8 text-center text-sm text-muted-foreground">Nenhuma arma cadastrada.</TableCell></TableRow>}
               </TableBody>
             </Table>
+            </div>
           )}
         </div>
       </div>

@@ -45,6 +45,7 @@ function AdminFinancePage() {
 
         <div className="rounded-lg border bg-card">
           <div className="border-b p-4"><h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Todas as faturas</h2></div>
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader><TableRow>
               <TableHead className="text-[10px] font-bold uppercase tracking-wider">ID</TableHead>
@@ -75,6 +76,7 @@ function AdminFinancePage() {
               {!invoices.length && <TableRow><TableCell colSpan={6} className="py-8 text-center text-sm text-muted-foreground">Nenhuma fatura.</TableCell></TableRow>}
             </TableBody>
           </Table>
+          </div>
         </div>
       </div>
     </div>

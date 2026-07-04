@@ -138,6 +138,7 @@ function VendasPage() {
         ) : !vendasData?.data?.length ? (
           <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">Nenhuma venda registrada.</div>
         ) : (
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -175,6 +176,7 @@ function VendasPage() {
               ))}
             </TableBody>
           </Table>
+          </div>
         )}
       </div>
 

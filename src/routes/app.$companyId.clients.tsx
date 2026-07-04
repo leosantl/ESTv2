@@ -54,7 +54,7 @@ function ClientsPage() {
             <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
             <Input placeholder="Buscar por nome, CPF, CR..." className="h-9 pl-8 text-sm" value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {["Ativo", "Pendente", "Inativo"].map((s) => (
               <Button key={s} variant={statusFilter === s ? "default" : "outline"} size="sm" onClick={() => setStatusFilter(statusFilter === s ? undefined : s)}>{s}</Button>
             ))}
@@ -62,6 +62,7 @@ function ClientsPage() {
         </div>
         <div className="rounded-lg border bg-card">
           {isLoading ? <div className="flex h-40 items-center justify-center"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div> : (
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader><TableRow>
                 <TableHead className="text-[10px] font-bold uppercase tracking-wider">Nome</TableHead>
@@ -92,6 +93,7 @@ function ClientsPage() {
                 {!data?.data?.length && <TableRow><TableCell colSpan={7} className="py-8 text-center text-sm text-muted-foreground">Nenhum atirador encontrado.</TableCell></TableRow>}
               </TableBody>
             </Table>
+            </div>
           )}
         </div>
         {data && <p className="text-right text-[11px] text-muted-foreground">{data.total} registro{data.total !== 1 ? "s" : ""}</p>}
@@ -500,7 +502,7 @@ function NewClientDialog({ open, onClose, companyId, onSave }: {
               <div className="flex flex-col items-center gap-4 rounded-xl border-2 border-dashed py-10 text-muted-foreground">
                 <ScanFace className="h-12 w-12 opacity-30" />
                 <p className="text-sm">Nenhuma foto capturada</p>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <Button size="sm" onClick={startCamera}>
                     <Camera className="mr-1.5 h-3.5 w-3.5" /> Usar câmera
                   </Button>

@@ -135,6 +135,7 @@ function ClientesPage() {
         ) : clientes.length === 0 ? (
           <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">Nenhum cliente cadastrado.</div>
         ) : (
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -172,6 +173,7 @@ function ClientesPage() {
               ))}
             </TableBody>
           </Table>
+          </div>
         )}
       </div>
 

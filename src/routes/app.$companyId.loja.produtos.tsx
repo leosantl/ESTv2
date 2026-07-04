@@ -131,6 +131,7 @@ function ProdutosPage() {
         ) : produtos.length === 0 ? (
           <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">Nenhum produto cadastrado.</div>
         ) : (
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -180,6 +181,7 @@ function ProdutosPage() {
               ))}
             </TableBody>
           </Table>
+          </div>
         )}
       </div>
 

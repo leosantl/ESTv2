@@ -47,6 +47,7 @@ function AmmoPage() {
         <div className="rounded-lg border bg-card">
           <div className="border-b p-4"><h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Estoque por calibre</h2></div>
           {isLoading ? <div className="flex h-32 items-center justify-center"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div> : (
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader><TableRow>
                 <TableHead className="text-[10px] font-bold uppercase tracking-wider">Calibre</TableHead>
@@ -68,6 +69,7 @@ function AmmoPage() {
                 {!ammoStock.length && <TableRow><TableCell colSpan={5} className="py-8 text-center text-sm text-muted-foreground">Nenhum calibre cadastrado.</TableCell></TableRow>}
               </TableBody>
             </Table>
+            </div>
           )}
         </div>
 

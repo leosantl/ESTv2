@@ -143,6 +143,7 @@
     color: var(--color-foreground);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
   }
 
   .font-mono, .tabular {
@@ -158,4 +159,14 @@
 
 @utility animate-fade-in {
   animation: sc-fade-in 0.4s cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+
+
+@utility pb-safe {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar { display: none; }
 }

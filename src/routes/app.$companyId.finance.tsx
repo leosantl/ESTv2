@@ -77,7 +77,7 @@ function FinancePage() {
           </div>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {["Receita", "Despesa"].map((t) => (
             <Button key={t} size="sm" variant={typeFilter === t ? "default" : "outline"} onClick={() => setTypeFilter(typeFilter === t ? undefined : t)}>{t}</Button>
           ))}
@@ -85,6 +85,7 @@ function FinancePage() {
 
         <div className="rounded-lg border bg-card">
           {isLoading ? <div className="flex h-40 items-center justify-center"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div> : (
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader><TableRow>
                 <TableHead className="text-[10px] font-bold uppercase tracking-wider">Data</TableHead>
@@ -110,6 +111,7 @@ function FinancePage() {
                 {!entries.length && <TableRow><TableCell colSpan={6} className="py-8 text-center text-sm text-muted-foreground">Nenhum lançamento.</TableCell></TableRow>}
               </TableBody>
             </Table>
+            </div>
           )}
         </div>
       </div>

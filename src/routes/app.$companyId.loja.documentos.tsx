@@ -81,6 +81,7 @@ function DocumentosPage() {
         <Input placeholder="Filtrar por cliente..." className="h-9 pl-8 text-sm" value={search} onChange={(e) => setSearch(e.target.value)} />
       </div>
       <div className="rounded-lg border bg-card">
+        <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -96,6 +97,7 @@ function DocumentosPage() {
             <AllDocs companyId={companyId} search={search} />
           </TableBody>
         </Table>
+        </div>
       </div>
     </div>
   );

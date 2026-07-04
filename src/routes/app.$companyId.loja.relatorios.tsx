@@ -67,6 +67,7 @@ function RelatoriosPage() {
                 "inventario.csv"
               )}><Download className="h-3.5 w-3.5 mr-1" /> CSV</Button>
             </div>
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -87,6 +88,7 @@ function RelatoriosPage() {
                 ))}
               </TableBody>
             </Table>
+            </div>
           </div>
         </TabsContent>
 
@@ -105,6 +107,7 @@ function RelatoriosPage() {
                 "vendas.csv"
               )}><Download className="h-3.5 w-3.5 mr-1" /> CSV</Button>
             </div>
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -125,6 +128,7 @@ function RelatoriosPage() {
                 ))}
               </TableBody>
             </Table>
+            </div>
           </div>
         </TabsContent>
 

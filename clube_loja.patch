@@ -1,0 +1,144 @@
+From 7cb8f2852d30ef89425ae7309eebe1a60d7ec556 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Thu, 2 Jul 2026 00:31:43 +0000
+Subject: [PATCH] =?UTF-8?q?refactor:=20rename=20Estande=E2=86=92Loja=20(co?=
+ =?UTF-8?q?mpany=20type)=20and=20Estande=20tab=E2=86=92Clube=20in=20docume?=
+ =?UTF-8?q?nts?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ src/hooks/queries/companies.ts          |  2 +-
+ src/routes/app.$companyId.documents.tsx | 24 ++++++++++++------------
+ src/routes/onboarding.tsx               |  2 +-
+ 3 files changed, 14 insertions(+), 14 deletions(-)
+
+diff --git a/src/hooks/queries/companies.ts b/src/hooks/queries/companies.ts
+index 8bd7686..9cd9236 100644
+--- a/src/hooks/queries/companies.ts
++++ b/src/hooks/queries/companies.ts
+@@ -10,7 +10,7 @@ import { formatDate, formatRelative, mapCompanyStatus } from "@/lib/formatters";
+ import { queryKeys } from "@/lib/query-keys";
+ import { supabase } from "@/lib/supabase";
+ 
+-type CompanyType = "Clube" | "Estande" | "Empresa";
++type CompanyType = "Clube" | "Loja" | "Empresa";
+ 
+ export function useCompanies() {
+   return useQuery({
+diff --git a/src/routes/app.$companyId.documents.tsx b/src/routes/app.$companyId.documents.tsx
+index 97810bb..bc9c8f5 100644
+--- a/src/routes/app.$companyId.documents.tsx
++++ b/src/routes/app.$companyId.documents.tsx
+@@ -28,7 +28,7 @@ const DOC_TYPES = [
+ ] as const;
+ 
+ type DocTypeKey = typeof DOC_TYPES[number]["key"];
+-type Tab = "estande" | "atiradores";
++type Tab = "clube" | "atiradores";
+ 
+ type DocRow = {
+   id: string; name: string; type: string; owner: string; weaponSerial: string;
+@@ -38,7 +38,7 @@ type DocRow = {
+ 
+ function DocumentsPage() {
+   const { companyId } = useParams({ from: "/app/$companyId/documents" });
+-  const [tab, setTab] = useState<Tab>("estande");
++  const [tab, setTab] = useState<Tab>("clube");
+   const [statusFilter, setStatusFilter] = useState<string | undefined>();
+   const [uploadFor, setUploadFor] = useState<{ tipo: DocTypeKey; clientId?: string } | null>(null);
+   const [expanded, setExpanded] = useState<Set<string>>(new Set(DOC_TYPES.map((d) => d.key)));
+@@ -49,7 +49,7 @@ function DocumentsPage() {
+   const getUrl = useDocumentSignedUrl();
+   const qc = useQueryClient();
+ 
+-  const estande = (allDocs as DocRow[]).filter((d) => !d.client_id);
++  const clube = (allDocs as DocRow[]).filter((d) => !d.client_id);
+   const atiradores = (allDocs as DocRow[]).filter((d) => !!d.client_id);
+ 
+   function toggleExpand(key: string) {
+@@ -78,7 +78,7 @@ function DocumentsPage() {
+     return acc;
+   }, {});
+ 
+-  const tabDocs = tab === "estande" ? estande : atiradores;
++  const tabDocs = tab === "clube" ? clube : atiradores;
+   const statCards = [
+     { label: "Válidos",        value: tabDocs.filter((d) => d.status === "Válido").length,         color: "text-emerald-600", bg: "bg-emerald-500/10" },
+     { label: "Vence em breve", value: tabDocs.filter((d) => d.status === "Vence em breve").length,  color: "text-amber-600",   bg: "bg-amber-500/10" },
+@@ -88,13 +88,13 @@ function DocumentsPage() {
+ 
+   return (
+     <div className="animate-fade-in">
+-      <PageHeader title="Documentos" description="Gerencie documentos do estande e dos atiradores separadamente." />
++      <PageHeader title="Documentos" description="Gerencie documentos do clube e dos atiradores separadamente." />
+       <div className="space-y-6 p-4 sm:p-6 lg:p-8">
+ 
+         {/* Tab switcher */}
+         <div className="flex gap-0 rounded-lg border bg-muted/40 p-1 w-fit">
+           {([
+-            { key: "estande",    label: "Estande",    icon: Building2 },
++            { key: "clube",      label: "Clube",      icon: Building2 },
+             { key: "atiradores", label: "Atiradores", icon: Users },
+           ] as const).map(({ key, label, icon: Icon }) => (
+             <button key={key} onClick={() => { setTab(key); setExpanded(new Set(DOC_TYPES.map((d) => d.key))); }}
+@@ -128,12 +128,12 @@ function DocumentsPage() {
+ 
+         {isLoading ? (
+           <div className="flex h-40 items-center justify-center"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+-        ) : tab === "estande" ? (
+-          /* ── ESTANDE: grouped by doc type ── */
++        ) : tab === "clube" ? (
++          /* ── CLUBE: grouped by doc type ── */
+           <div className="space-y-3">
+             {DOC_TYPES.map((dtype) => {
+               const Icon = dtype.icon;
+-              const rows = estande.filter((d) => d.type === dtype.key);
++              const rows = clube.filter((d) => d.type === dtype.key);
+               const isOpen = expanded.has(dtype.key);
+               return (
+                 <div key={dtype.key} className="rounded-xl border bg-card overflow-hidden">
+@@ -168,7 +168,7 @@ function DocumentsPage() {
+                       {rows.length === 0 ? (
+                         <div className="flex flex-col items-center justify-center gap-2 py-8 text-muted-foreground">
+                           <Upload className="h-6 w-6 opacity-40" />
+-                          <p className="text-xs">Nenhum {dtype.label} do estande cadastrado</p>
++                          <p className="text-xs">Nenhum {dtype.label} do clube cadastrado</p>
+                           <Button size="sm" variant="outline" className="mt-1 text-xs" onClick={() => setUploadFor({ tipo: dtype.key })}>
+                             <Plus className="mr-1 h-3 w-3" /> Adicionar primeiro
+                           </Button>
+@@ -335,7 +335,7 @@ function UploadDialog({ open, tipoFixed, preselectedClientId, isClientDoc, onClo
+             <div className={`grid size-8 place-items-center rounded-lg ${dtype.bg}`}>
+               <Icon className={`h-4 w-4 ${dtype.color}`} strokeWidth={1.75} />
+             </div>
+-            {isClientDoc ? "Documento do atirador" : "Documento do estande"}
++            {isClientDoc ? "Documento do atirador" : "Documento do clube"}
+           </DialogTitle>
+         </DialogHeader>
+         <form onSubmit={submit} className="space-y-3">
+@@ -390,7 +390,7 @@ function UploadDialog({ open, tipoFixed, preselectedClientId, isClientDoc, onClo
+             </div>
+           )}
+ 
+-          {/* Weapon (only in estande tab) */}
++          {/* Weapon (only in clube tab) */}
+           {!isClientDoc && weapons.length > 0 && (
+             <div>
+               <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Vincular a arma (opcional)</label>
+diff --git a/src/routes/onboarding.tsx b/src/routes/onboarding.tsx
+index d8a34a6..da781c9 100644
+--- a/src/routes/onboarding.tsx
++++ b/src/routes/onboarding.tsx
+@@ -232,7 +232,7 @@ function StepCompany({ form, setForm, password, setPassword }: {
+         <div>
+           <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Tipo de operação</label>
+           <select value={form.tipo} onChange={(e) => set("tipo")(e.target.value)} className="h-10 w-full rounded-md border bg-background px-3 text-sm outline-none focus:border-foreground/60">
+-            <option value="Clube">Clube de Tiro</option><option value="Estande">Estande</option><option value="Empresa">Despachante / Empresa</option>
++            <option value="Clube">Clube de Tiro</option><option value="Loja">Loja</option><option value="Empresa">Despachante / Empresa</option>
+           </select>
+         </div>
+         <Field label="Cidade / UF" value={form.cidade} onChange={set("cidade")} />
+-- 
+2.43.0
+

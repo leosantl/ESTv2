@@ -31,6 +31,7 @@ function AuditoriaPage() {
         ) : (logs as Record<string, unknown>[]).length === 0 ? (
           <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">Nenhum registro de auditoria.</div>
         ) : (
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -61,6 +62,7 @@ function AuditoriaPage() {
               ))}
             </TableBody>
           </Table>
+          </div>
         )}
       </div>
     </div>

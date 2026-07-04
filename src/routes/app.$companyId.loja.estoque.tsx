@@ -59,6 +59,7 @@ function EstoquePage() {
         ) : movs.length === 0 ? (
           <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">Nenhuma movimentação registrada.</div>
         ) : (
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -99,6 +100,7 @@ function EstoquePage() {
               })}
             </TableBody>
           </Table>
+          </div>
         )}
       </div>
 

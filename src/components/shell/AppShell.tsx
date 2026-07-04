@@ -110,18 +110,18 @@ export function AppShell({ groups, brandLabel, brandSub, brandInitials, brandHre
       </Sidebar>
       <SidebarInset>
         <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b bg-background/95 px-4 backdrop-blur-sm">
-          <SidebarTrigger className="-ml-1" />
+          <SidebarTrigger className="-ml-1 size-9" />
           <div className="hidden flex-1 items-center gap-2 rounded-md border bg-muted/30 px-2.5 py-1.5 text-xs text-muted-foreground sm:flex">
             <Search className="h-3.5 w-3.5" /><span>Buscar atiradores, armas, documentos...</span>
             <kbd className="ml-auto font-mono text-[10px]">⌘K</kbd>
           </div>
-          <div className="flex-1 sm:hidden" />
-          <Button variant="ghost" size="icon" className="relative size-8">
+          <p className="flex-1 truncate text-sm font-semibold sm:hidden">{brandLabel}</p>
+          <Button variant="ghost" size="icon" className="relative size-9">
             <Bell className="h-4 w-4" strokeWidth={1.75} />
-            <span className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-destructive" />
+            <span className="absolute right-2 top-2 size-1.5 rounded-full bg-destructive" />
           </Button>
         </header>
-        <main className="flex-1 overflow-x-hidden">{children}</main>
+        <main className="flex-1 overflow-x-hidden pb-safe">{children}</main>
       </SidebarInset>
       <UpgradeModal open={!!upgradeItem} onClose={() => setUpgradeItem(null)} item={upgradeItem} billingUrl={billingUrl ?? "/"} />
     </SidebarProvider>

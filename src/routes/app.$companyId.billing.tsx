@@ -148,6 +148,7 @@ function BillingPage() {
           <div className="border-b p-4">
             <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Faturas</h2>
           </div>
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -188,6 +189,7 @@ function BillingPage() {
               )}
             </TableBody>
           </Table>
+          </div>
         </div>
       </div>
     </div>

@@ -28,6 +28,7 @@ function AdminCompaniesPage() {
         </div>
         <div className="rounded-lg border bg-card">
           {isLoading ? <div className="flex h-40 items-center justify-center"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div> : (
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader><TableRow>
                 <TableHead className="text-[10px] font-bold uppercase tracking-wider">Empresa</TableHead>
@@ -56,6 +57,7 @@ function AdminCompaniesPage() {
                 {!filtered.length && <TableRow><TableCell colSpan={6} className="py-8 text-center text-sm text-muted-foreground">Nenhuma empresa encontrada.</TableCell></TableRow>}
               </TableBody>
             </Table>
+            </div>
           )}
         </div>
       </div>

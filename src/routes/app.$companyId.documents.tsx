@@ -88,7 +88,7 @@ function DocumentsPage() {
             </div>
           ))}
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {[undefined, "Válido", "Vence em breve", "Vencido"].map((s) => (
             <Button key={s ?? "todos"} size="sm" variant={statusFilter === s ? "default" : "outline"}
               onClick={() => setStatusFilter(s)}>
