@@ -7,7 +7,8 @@ import {
   Upload, Eye, Trash2, Loader2, ChevronDown, ChevronUp, Plus,
 } from "lucide-react";
 import { useState, useRef } from "react";
-import { useDocuments, useUploadDocument, useDocumentSignedUrl, useClients, useWeapons } from "@/hooks/useSupabase";
+import { useDocuments, useUploadDocument, useDocumentSignedUrl, useClients, useWeapons, useClientBackup, useStorageUsage, useSubscription } from "@/hooks/useSupabase";
+import { fmtBytes, getPlanStorageBytes } from "@/lib/plan-features";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
@@ -37,8 +38,11 @@ function DocumentsPage() {
   const { data: documents = [], isLoading } = useDocuments(companyId, { status: statusFilter });
   const { data: clientsData } = useClients(companyId);
   const { data: weapons = [] } = useWeapons(companyId);
+  const { data: sub } = useSubscription(companyId);
+  const { data: storageData } = useStorageUsage(companyId);
   const upload = useUploadDocument();
   const getUrl = useDocumentSignedUrl();
+  const clientBackup = useClientBackup(companyId);
   const qc = useQueryClient();
 
   function toggleExpand(key: DocTypeKey) {

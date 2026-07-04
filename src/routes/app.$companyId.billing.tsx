@@ -2,10 +2,11 @@ import { createFileRoute, useParams } from "@tanstack/react-router";
 import { PageHeader } from "@/components/shell/PageHeader";
 import { StatusBadge } from "@/components/shell/StatusBadge";
 import { Button } from "@/components/ui/button";
-import { Check, Loader2, ExternalLink } from "lucide-react";
+import { Check, Loader2, ExternalLink, HardDrive, Download } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { usePlans, useSubscription, useInvoices } from "@/hooks/useSupabase";
+import { usePlans, useSubscription, useInvoices, useStorageUsage, useCompanyBackup, useCompany } from "@/hooks/useSupabase";
 import { useState } from "react";
+import { getPlanStorageBytes, fmtBytes, PLAN_STORAGE_LABEL, type PlanId } from "@/lib/plan-features";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 
@@ -21,10 +22,16 @@ function BillingPage() {
   const { data: plans = [], isLoading: loadingPlans } = usePlans();
   const { data: sub } = useSubscription(companyId);
   const { data: invoices = [] } = useInvoices(companyId);
+  const { data: storageData } = useStorageUsage(companyId);
+  const { data: company } = useCompany(companyId);
+  const companyBackup = useCompanyBackup(companyId);
   const [annual, setAnnual] = useState(false);
   const [upgradingPlan, setUpgradingPlan] = useState<string | null>(null);
 
   const currentPlanId = sub?.plan_id;
+  const storageUsed = storageData?.totalBytes ?? 0;
+  const storageLimit = getPlanStorageBytes(currentPlanId);
+  const storagePct = Math.min((storageUsed / storageLimit) * 100, 100);
 
   async function handleUpgrade(planId: string) {
     setUpgradingPlan(planId);
@@ -70,6 +77,38 @@ function BillingPage() {
             </div>
           </div>
         )}
+
+        {/* Storage meter */}
+        <div className="rounded-lg border bg-card p-5">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="grid size-9 shrink-0 place-items-center rounded-full bg-muted">
+                <HardDrive className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Armazenamento</p>
+                <p className="mt-0.5 text-sm font-semibold">
+                  {fmtBytes(storageUsed)}
+                  <span className="font-normal text-muted-foreground"> / {currentPlanId ? PLAN_STORAGE_LABEL[currentPlanId as PlanId] : "—"}</span>
+                </p>
+              </div>
+            </div>
+            <Button size="sm" variant="outline" className="shrink-0 gap-1.5"
+              disabled={companyBackup.isPending}
+              onClick={() => companyBackup.mutate({ companyName: company?.name ?? "clube" })}>
+              {companyBackup.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+              Backup completo
+            </Button>
+          </div>
+          <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
+            <div className={`h-full rounded-full transition-all duration-500 ${storagePct >= 90 ? "bg-destructive" : storagePct >= 70 ? "bg-amber-500" : "bg-foreground"}`}
+              style={{ width: `${storagePct}%` }} />
+          </div>
+          <p className="mt-1.5 text-[11px] text-muted-foreground">
+            {storageData?.count ?? 0} documento(s) · {storagePct.toFixed(1)}% utilizado
+            {storagePct >= 80 && <span className="ml-2 font-semibold text-amber-600">Considere fazer upgrade para mais espaço.</span>}
+          </p>
+        </div>
 
         <div className="flex items-center justify-between">
           <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Planos disponíveis</h2>
@@ -121,6 +160,10 @@ function BillingPage() {
                     <Check className="mt-0.5 h-3 w-3 shrink-0 text-emerald-600" />{f}
                   </li>
                 ))}
+                <li className="flex items-start gap-1.5 text-xs">
+                  <HardDrive className="mt-0.5 h-3 w-3 shrink-0 text-muted-foreground" />
+                  <span className="text-muted-foreground">{PLAN_STORAGE_LABEL[p.id as PlanId] ?? "—"} de armazenamento</span>
+                </li>
               </ul>
               {p.id === currentPlanId ? (
                 <Button className="mt-4 w-full" size="sm" variant="outline" disabled>

@@ -9,6 +9,7 @@ import { SIGNED_URL_TTL_SECONDS } from "@/lib/constants";
 import { mapDocStatus } from "@/lib/formatters";
 import { queryKeys } from "@/lib/query-keys";
 import { supabase } from "@/lib/supabase";
+import { getPlanStorageBytes } from "@/lib/plan-features";
 
 interface DocumentListOptions {
   status?: string;
@@ -85,6 +86,15 @@ export function useUploadDocument() {
       clientId,
       weaponId,
     }: UploadDocumentPayload) => {
+      const [{ data: usageData }, { data: subData }] = await Promise.all([
+        supabase.from("documents").select("file_size_bytes").eq("company_id", companyId),
+        supabase.from("subscriptions").select("plan_id").eq("company_id", companyId).single(),
+      ]);
+      const usedBytes = (usageData ?? []).reduce((s: number, d: { file_size_bytes: number | null }) => s + (d.file_size_bytes ?? 0), 0);
+      const limitBytes = getPlanStorageBytes(subData?.plan_id);
+      if (usedBytes + file.size > limitBytes) {
+        throw new Error(`Limite de armazenamento atingido. Limite do plano: ${(limitBytes / (1024 ** 3)).toFixed(0)} GB. Faça upgrade para continuar.`);
+      }
       const ext = file.name.split(".").pop();
       const path = `${companyId}/documentos/${Date.now()}-${Math.random()
         .toString(36)
