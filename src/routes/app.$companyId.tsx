@@ -3,7 +3,7 @@ import { AppShell, type NavGroup } from "@/components/shell/AppShell";
 import {
   LayoutDashboard, Users, Crosshair, Package, FileText,
   CalendarDays, Wallet, UserCog, CreditCard, ArrowLeftRight, ScanFace, Store, Building2,
-  Loader2, ShieldAlert,
+  Loader2, ShieldAlert, Bell,
 } from "lucide-react";
 import { UnitProvider } from "@/contexts/UnitContext";
 import { useEffect } from "react";
@@ -92,6 +92,7 @@ function CompanyLayout() {
     {
       label: "Conta",
       items: [
+        { title: "Alertas", url: `${base}/notifications`, icon: Bell },
         { title: "Usuários", url: `${base}/users`, icon: UserCog },
         { title: "Assinatura", url: `${base}/billing`, icon: CreditCard },
         { title: "Trocar workspace", url: "/", icon: ArrowLeftRight },

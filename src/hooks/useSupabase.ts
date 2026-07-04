@@ -21,3 +21,4 @@ export * from "./queries/billing";
 export * from "./queries/admin";
 export * from "./queries/range";
 export * from "./queries/storage";
+export * from "./queries/notifications";
