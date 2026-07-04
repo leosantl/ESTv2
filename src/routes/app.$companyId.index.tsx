@@ -5,7 +5,8 @@ import { MiniArea } from "@/components/charts/MiniArea";
 import { MiniBars } from "@/components/charts/MiniBars";
 import { StatusBadge } from "@/components/shell/StatusBadge";
 import { AlertTriangle, ArrowUpRight, Loader2 } from "lucide-react";
-import { useCompany, useCompanyKpis, useClients, useDocuments, useSchedules, useWeekScheduleSummary, useCashflow } from "@/hooks/useSupabase";
+import { useCompany, useCompanyKpis, useClients, useDocuments, useSchedules, useWeekScheduleSummary, useCashflow, useUsers } from "@/hooks/useSupabase";
+import { OnboardingChecklist } from "@/components/shell/OnboardingChecklist";
 
 export const Route = createFileRoute("/app/$companyId/")({ component: CompanyDashboard });
 
@@ -22,6 +23,7 @@ function CompanyDashboard() {
   const { data: todaySchedule = [] } = useSchedules(companyId, { date: today });
   const { data: weekSchedule = [] } = useWeekScheduleSummary(companyId);
   const { data: cashflow = [] } = useCashflow(companyId);
+  const { data: usersData } = useUsers(companyId);
 
   if (loadingCo) return <div className="flex h-64 items-center justify-center"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>;
   if (!company) return null;
@@ -40,6 +42,8 @@ function CompanyDashboard() {
         description={`Visão geral operacional do ${company.name}.`}
       />
       <div className="space-y-6 p-4 sm:p-6 lg:p-8">
+        <OnboardingChecklist companyId={companyId} kpis={kpis} userCount={usersData?.length ?? 1} />
+
         {expiringSoon > 0 && (
           <div className="flex items-center justify-between gap-3 rounded-lg border border-destructive/20 bg-destructive/5 p-4">
             <div className="flex min-w-0 items-center gap-3">
