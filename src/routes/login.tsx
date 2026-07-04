@@ -14,7 +14,7 @@ function LoginPage() {
   const { signIn } = useAuth();
   const [showPwd, setShowPwd] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [email, setEmail] = useState("diretoria@alphaprecision.cac");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [forgotMode, setForgotMode] = useState(false);
   const { resetPassword } = useAuth();
