@@ -96,3 +96,37 @@ export function useSendPortalInvite(companyId: string) {
     },
   });
 }
+
+export function useUploadPortalDoc() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ companyId, clientId, file, tipo, vencimento }: {
+      companyId: string; clientId: string; file: File; tipo: string; vencimento: string;
+    }) => {
+      const ext = file.name.split(".").pop();
+      const path = `portal/${clientId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from("documentos")
+        .upload(path, file, { contentType: file.type });
+      if (upErr) throw upErr;
+      const { data, error } = await supabase.from("documents").insert({
+        company_id: companyId,
+        client_id: clientId,
+        nome: file.name,
+        tipo: tipo.toLowerCase(),
+        emissao: new Date().toISOString().split("T")[0],
+        vencimento: vencimento || null,
+        storage_path: path,
+        mime_type: file.type,
+        file_size_bytes: file.size,
+      }).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (d) => {
+      qc.invalidateQueries({ queryKey: ["portal", "documents", d.client_id] });
+      toast.success("Documento enviado!");
+    },
+    onError: (e) => toast.error((e as Error).message),
+  });
+}

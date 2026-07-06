@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { AlertTriangle, CalendarDays, FileText, LogOut, User } from "lucide-react";
 import { usePortalAuth } from "@/contexts/PortalAuthContext";
-import { usePortalClient, usePortalDocuments, usePortalSchedules, usePortalDocUrl, useCreatePortalSchedule } from "@/hooks/queries/portal";
+import { usePortalClient, usePortalDocuments, usePortalSchedules, usePortalDocUrl, useCreatePortalSchedule, useUploadPortalDoc } from "@/hooks/queries/portal";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/portal/dashboard")({
@@ -24,8 +24,11 @@ function PortalDashboard() {
   const { data: schedules = [] } = usePortalSchedules(client?.id);
   const docUrl = usePortalDocUrl();
   const createSched = useCreatePortalSchedule();
+  const uploadDoc = useUploadPortalDoc();
   const [showSched, setShowSched] = useState(false);
   const [schedForm, setSchedForm] = useState({ data: "", hora: "", tipo: "treino", titulo: "" });
+  const [showUpload, setShowUpload] = useState(false);
+  const [upForm, setUpForm] = useState<{ tipo: string; vencimento: string; file: File | null }>({ tipo: "cr", vencimento: "", file: null });
 
   if (!user) {
     navigate({ to: "/portal/login" });
@@ -78,6 +81,23 @@ function PortalDashboard() {
       });
       setShowSched(false);
       setSchedForm({ data: "", hora: "", tipo: "treino", titulo: "" });
+    } catch { /* toast tratado no hook */ }
+  }
+
+  async function handleUpload(e: React.FormEvent) {
+    e.preventDefault();
+    if (!client) return;
+    if (!upForm.file) { toast.error("Selecione um arquivo."); return; }
+    try {
+      await uploadDoc.mutateAsync({
+        companyId: client.company_id,
+        clientId: client.id,
+        file: upForm.file,
+        tipo: upForm.tipo,
+        vencimento: upForm.vencimento,
+      });
+      setShowUpload(false);
+      setUpForm({ tipo: "cr", vencimento: "", file: null });
     } catch { /* toast tratado no hook */ }
   }
 
@@ -205,10 +225,49 @@ function PortalDashboard() {
         </div>
 
         <section className="rounded-xl border bg-card p-5">
-          <div className="mb-4 flex items-center gap-2">
-            <FileText className="h-4 w-4 text-foreground" />
-            <h2 className="text-sm font-semibold">Meus Documentos</h2>
+          <div className="mb-4 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <FileText className="h-4 w-4 text-foreground" />
+              <h2 className="text-sm font-semibold">Meus Documentos</h2>
+            </div>
+            <button onClick={() => setShowUpload((s) => !s)}
+              className="rounded-md border px-3 py-1 text-xs font-medium hover:bg-muted">
+              {showUpload ? "Cancelar" : "Adicionar"}
+            </button>
           </div>
+
+          {showUpload && (
+            <form onSubmit={handleUpload} className="mb-4 space-y-3 rounded-lg border bg-background p-3">
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Tipo</label>
+                  <select value={upForm.tipo} onChange={(e) => setUpForm((p) => ({ ...p, tipo: e.target.value }))}
+                    className="h-9 w-full rounded-md border bg-card px-2 text-sm outline-none">
+                    <option value="cr">CR</option>
+                    <option value="craf">CRAF</option>
+                    <option value="certificado">Certificado</option>
+                    <option value="contrato">Contrato</option>
+                    <option value="outro">Outro</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Validade</label>
+                  <input type="date" value={upForm.vencimento} onChange={(e) => setUpForm((p) => ({ ...p, vencimento: e.target.value }))}
+                    className="h-9 w-full rounded-md border bg-card px-2 text-sm outline-none" />
+                </div>
+              </div>
+              <div>
+                <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Arquivo</label>
+                <input type="file" onChange={(e) => setUpForm((p) => ({ ...p, file: e.target.files?.[0] ?? null }))}
+                  className="w-full text-sm file:mr-3 file:rounded-md file:border-0 file:bg-accent file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-accent-foreground" />
+              </div>
+              <button type="submit" disabled={uploadDoc.isPending}
+                className="inline-flex h-9 w-full items-center justify-center rounded-md bg-accent text-sm font-semibold text-accent-foreground hover:opacity-90 disabled:opacity-60">
+                {uploadDoc.isPending ? "Enviando..." : "Enviar documento"}
+              </button>
+            </form>
+          )}
+
           {docs.length === 0 ? (
             <p className="text-sm text-muted-foreground">Nenhum documento disponível.</p>
           ) : (
