@@ -1,14 +1,12 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 
 export function usePortalClient() {
   return useQuery({
     queryKey: ["portal", "client"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("clients")
-        .select("*")
-        .single();
+      const { data, error } = await supabase.from("clients").select("*, companies(nome_fantasia)").single();
       if (error) throw error;
       return data;
     },
@@ -23,7 +21,7 @@ export function usePortalDocuments(clientId: string | undefined) {
         .from("documents")
         .select("*")
         .eq("client_id", clientId!)
-        .order("created_at", { ascending: false });
+        .order("vencimento", { ascending: false });
       if (error) throw error;
       return data ?? [];
     },
@@ -39,9 +37,9 @@ export function usePortalSchedules(clientId: string | undefined) {
         .from("schedules")
         .select("*")
         .eq("client_id", clientId!)
-        .gte("data", new Date().toISOString().split("T")[0])
-        .order("data")
-        .limit(10);
+        .gte("starts_at", new Date().toISOString())
+        .order("starts_at")
+        .limit(20);
       if (error) throw error;
       return data ?? [];
     },
@@ -53,11 +51,37 @@ export function usePortalDocUrl() {
   return useMutation({
     mutationFn: async (path: string) => {
       const { data, error } = await supabase.storage
-        .from("documents")
+        .from("documentos")
         .createSignedUrl(path, 300);
       if (error) throw error;
       return data.signedUrl;
     },
+  });
+}
+
+export function useCreatePortalSchedule() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: {
+      company_id: string;
+      client_id: string;
+      titulo: string;
+      tipo: string;
+      starts_at: string;
+    }) => {
+      const { data, error } = await supabase
+        .from("schedules")
+        .insert(payload)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (d) => {
+      qc.invalidateQueries({ queryKey: ["portal", "schedules", d.client_id] });
+      toast.success("Sessão agendada!");
+    },
+    onError: (e) => toast.error((e as Error).message),
   });
 }
 

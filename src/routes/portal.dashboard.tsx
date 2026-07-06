@@ -1,7 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { AlertTriangle, CalendarDays, FileText, LogOut, Target, User } from "lucide-react";
+import { useState } from "react";
+import { AlertTriangle, CalendarDays, FileText, LogOut, User } from "lucide-react";
 import { usePortalAuth } from "@/contexts/PortalAuthContext";
-import { usePortalClient, usePortalDocuments, usePortalSchedules, usePortalDocUrl } from "@/hooks/queries/portal";
+import { usePortalClient, usePortalDocuments, usePortalSchedules, usePortalDocUrl, useCreatePortalSchedule } from "@/hooks/queries/portal";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/portal/dashboard")({
@@ -22,6 +23,9 @@ function PortalDashboard() {
   const { data: docs = [] } = usePortalDocuments(client?.id);
   const { data: schedules = [] } = usePortalSchedules(client?.id);
   const docUrl = usePortalDocUrl();
+  const createSched = useCreatePortalSchedule();
+  const [showSched, setShowSched] = useState(false);
+  const [schedForm, setSchedForm] = useState({ data: "", hora: "", tipo: "treino", titulo: "" });
 
   if (!user) {
     navigate({ to: "/portal/login" });
@@ -60,6 +64,23 @@ function PortalDashboard() {
     }
   }
 
+  async function handleSchedule(e: React.FormEvent) {
+    e.preventDefault();
+    if (!client) return;
+    if (!schedForm.data || !schedForm.hora) { toast.error("Informe data e hora."); return; }
+    try {
+      await createSched.mutateAsync({
+        company_id: client.company_id,
+        client_id: client.id,
+        titulo: schedForm.titulo || "Treino livre",
+        tipo: schedForm.tipo,
+        starts_at: `${schedForm.data}T${schedForm.hora}:00`,
+      });
+      setShowSched(false);
+      setSchedForm({ data: "", hora: "", tipo: "treino", titulo: "" });
+    } catch { /* toast tratado no hook */ }
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card px-4 py-3 sm:px-6">
@@ -67,7 +88,7 @@ function PortalDashboard() {
           <div className="flex items-center gap-2.5">
             <div className="grid size-7 place-items-center rounded bg-accent text-[10px] font-bold text-accent-foreground">PA</div>
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Portal do Atirador</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">{client.companies?.nome_fantasia ?? "Portal do Atirador"}</p>
               <p className="text-sm font-semibold leading-tight">{client.nome}</p>
             </div>
           </div>
@@ -116,18 +137,66 @@ function PortalDashboard() {
           </section>
 
           <section className="rounded-xl border bg-card p-5">
-            <div className="mb-4 flex items-center gap-2">
-              <CalendarDays className="h-4 w-4 text-foreground" />
-              <h2 className="text-sm font-semibold">Próximas Sessões</h2>
+            <div className="mb-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <CalendarDays className="h-4 w-4 text-foreground" />
+                <h2 className="text-sm font-semibold">Próximas Sessões</h2>
+              </div>
+              <button onClick={() => setShowSched((s) => !s)}
+                className="rounded-md border px-3 py-1 text-xs font-medium hover:bg-muted">
+                {showSched ? "Cancelar" : "Agendar"}
+              </button>
             </div>
+
+            {showSched && (
+              <form onSubmit={handleSchedule} className="mb-4 space-y-3 rounded-lg border bg-background p-3">
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Data</label>
+                    <input type="date" required value={schedForm.data} onChange={(e) => setSchedForm((p) => ({ ...p, data: e.target.value }))}
+                      className="h-9 w-full rounded-md border bg-card px-2 text-sm outline-none" />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Hora</label>
+                    <input type="time" required value={schedForm.hora} onChange={(e) => setSchedForm((p) => ({ ...p, hora: e.target.value }))}
+                      className="h-9 w-full rounded-md border bg-card px-2 text-sm outline-none" />
+                  </div>
+                </div>
+                <div>
+                  <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Tipo</label>
+                  <select value={schedForm.tipo} onChange={(e) => setSchedForm((p) => ({ ...p, tipo: e.target.value }))}
+                    className="h-9 w-full rounded-md border bg-card px-2 text-sm outline-none">
+                    <option value="treino">Treino</option>
+                    <option value="avaliacao">Avaliação</option>
+                    <option value="curso">Curso</option>
+                    <option value="reserva">Reserva</option>
+                    <option value="evento">Evento</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Observação</label>
+                  <input value={schedForm.titulo} onChange={(e) => setSchedForm((p) => ({ ...p, titulo: e.target.value }))} placeholder="Treino livre"
+                    className="h-9 w-full rounded-md border bg-card px-2 text-sm outline-none" />
+                </div>
+                <button type="submit" disabled={createSched.isPending}
+                  className="inline-flex h-9 w-full items-center justify-center rounded-md bg-accent text-sm font-semibold text-accent-foreground hover:opacity-90 disabled:opacity-60">
+                  {createSched.isPending ? "Agendando..." : "Confirmar agendamento"}
+                </button>
+              </form>
+            )}
+
             {schedules.length === 0 ? (
               <p className="text-sm text-muted-foreground">Nenhuma sessão agendada.</p>
             ) : (
               <ul className="space-y-2">
                 {schedules.map((s: any) => (
                   <li key={s.id} className="rounded-lg border px-3 py-2 text-sm">
-                    <p className="font-medium">{new Date(s.data).toLocaleDateString("pt-BR", { weekday: "short", day: "numeric", month: "short" })}</p>
-                    <p className="text-xs text-muted-foreground">{s.horario ?? ""} {s.modalidade ? `· ${s.modalidade}` : ""}</p>
+                    <p className="font-medium">
+                      {new Date(s.starts_at).toLocaleDateString("pt-BR", { weekday: "short", day: "numeric", month: "short" })}
+                      {" · "}
+                      {new Date(s.starts_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                    </p>
+                    <p className="text-xs text-muted-foreground">{s.titulo ?? ""} {s.tipo ? `· ${s.tipo}` : ""}</p>
                   </li>
                 ))}
               </ul>
@@ -147,10 +216,10 @@ function PortalDashboard() {
               {docs.map((d: any) => (
                 <li key={d.id} className="flex items-center justify-between gap-4 py-3">
                   <div>
-                    <p className="text-sm font-medium">{d.tipo ?? d.nome ?? "Documento"}</p>
+                    <p className="text-sm font-medium">{d.nome ?? d.tipo ?? "Documento"}</p>
                     <p className="text-xs text-muted-foreground">
-                      {d.created_at ? new Date(d.created_at).toLocaleDateString("pt-BR") : ""}
-                      {d.validade ? ` · Validade: ${new Date(d.validade).toLocaleDateString("pt-BR")}` : ""}
+                      {d.tipo ? d.tipo : ""}
+                      {d.vencimento ? ` · Validade: ${new Date(d.vencimento).toLocaleDateString("pt-BR")}` : ""}
                     </p>
                   </div>
                   {d.storage_path && (
