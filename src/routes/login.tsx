@@ -114,6 +114,7 @@ function LoginPage() {
             Novo na plataforma?{" "}
             <Link to="/onboarding" className="font-semibold text-foreground hover:underline">Cadastrar empresa</Link>
           </p>
+          <p className="mt-3 text-center text-xs text-muted-foreground">É associado de um clube? <Link to="/portal/login" className="font-semibold text-foreground hover:underline">Acessar Portal do Atirador →</Link></p>
         </div>
 
         <p className="mt-auto text-[11px] text-muted-foreground">© 2026 StandControl · Termos · Privacidade · Status</p>
